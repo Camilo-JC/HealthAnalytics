@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configuraci&oacute;n — Healthcare ETL</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="/static/css/dashboard.css" rel="stylesheet">
+</head>
+<body>
+<div id="toast-container" class="toast-container"></div><div id="sidebar-overlay" class="sidebar-overlay"></div>
+{% include 'components/sidebar.html' %}
+<div class="main-content">
+    <nav class="top-navbar"><div class="left"><button id="sidebar-toggle" class="toggle-btn"><i class="bi bi-list"></i></button><h1 class="page-title">Configuraci&oacute;n</h1></div><div class="right"><button class="btn-logout" id="btn-logout" title="Cerrar sesi&oacute;n"><i class="bi bi-box-arrow-right"></i></button></div></nav>
+    <div class="content-area">
+        <div class="row g-3">
+            <div class="col-md-6">
+                <div class="card mb-3">
+                    <div class="card-header"><h6><i class="bi bi-person-circle"></i> Perfil de Usuario</h6></div>
+                    <div class="card-body">
+                        <div class="mb-3"><label class="form-label">Nombre Completo</label><input type="text" class="form-control" id="settings-name" disabled></div>
+                        <div class="mb-3"><label class="form-label">Correo Electr&oacute;nico</label><input type="email" class="form-control" id="settings-email" disabled></div>
+                        <div class="mb-3"><label class="form-label">Rol</label><input type="text" class="form-control" id="settings-role" disabled></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card mb-3">
+                    <div class="card-header"><h6><i class="bi bi-info-circle"></i> Informaci&oacute;n del Sistema</h6></div>
+                    <div class="card-body">
+                        <table class="table-custom w-100">
+                            <tr><td style="padding:.35rem .5rem;">Plataforma</td><td style="padding:.35rem .5rem;" class="fw-600">Healthcare ETL Platform v1.0.0</td></tr>
+                            <tr><td style="padding:.35rem .5rem;">Python</td><td style="padding:.35rem .5rem;" class="fw-600">3.13</td></tr>
+                            <tr><td style="padding:.35rem .5rem;">Framework</td><td style="padding:.35rem .5rem;" class="fw-600">Django 5.2</td></tr>
+                            <tr><td style="padding:.35rem .5rem;">Base de Datos</td><td style="padding:.35rem .5rem;" class="fw-600">SQLite</td></tr>
+                            <tr><td style="padding:.35rem .5rem;">Scikit-Learn</td><td style="padding:.35rem .5rem;" class="fw-600">1.6</td></tr>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card mb-3" id="users-section" data-perm="users_manage">
+            <div class="card-header"><h6><i class="bi bi-shield-lock"></i> Gesti&oacute;n de Usuarios</h6></div>
+            <div class="card-body">
+                <div id="users-list"><div class="loading-placeholder"><span class="loading-spinner"></span> Cargando usuarios...</div></div>
+            </div>
+        </div>
+    </div>
+</div>
+<script src="/static/js/dashboard.js"></script>
+<script>
+var currentUserRole = null;
+document.addEventListener('DOMContentLoaded', async () => {
+    setupSidebar();
+    await checkAuth();
+    const data = await apiRequest('/auth/profile/');
+    if (data) {
+        const u = data.data || data;
+        document.getElementById('settings-name').value = u.full_name || '';
+        document.getElementById('settings-email').value = u.email || '';
+        const roles = {admin: 'Administrador', doctor: 'M&eacute;dico', analyst: 'Analista'};
+        document.getElementById('settings-role').value = roles[u.role] || u.role;
+    }
+    const usersSection = document.getElementById('users-section');
+    if (usersSection && usersSection.dataset.perm) {
+        const perm = usersSection.dataset.perm;
+        if (currentUserRole && ROLE_PERMISSIONS[currentUserRole] && ROLE_PERMISSIONS[currentUserRole].includes(perm)) {
+            const usersData = await apiRequest('/auth/users/');
+            if (usersData?.results) {
+                const roleLabels = {admin: 'Administrador', doctor: 'M&eacute;dico', analyst: 'Analista'};
+                document.getElementById('users-list').innerHTML = `
+                    <div class="table-container">
+                        <table class="table-custom">
+                            <thead><tr><th>Email</th><th>Nombre</th><th>Rol</th><th>Activo</th><th>&Uacute;ltimo Acceso</th></tr></thead>
+                            <tbody>
+                                ${usersData.results.map(u => `
+                                    <tr>
+                                        <td>${u.email}</td>
+                                        <td>${u.full_name || '-'}</td>
+                                        <td><span class="risk-badge risk-low">${roleLabels[u.role] || u.role}</span></td>
+                                        <td>${u.is_active ? '<span class="text-success">S&iacute;</span>' : '<span class="text-danger">No</span>'}</td>
+                                        <td>${u.last_login ? new Date(u.last_login).toLocaleDateString() : 'Nunca'}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            }
+        }
+    }
+});
+</script>
+</body>
+</html>

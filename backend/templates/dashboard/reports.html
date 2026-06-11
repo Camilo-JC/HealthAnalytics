@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reportes — Healthcare ETL</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="/static/css/dashboard.css" rel="stylesheet">
+</head>
+<body>
+<div id="toast-container" class="toast-container"></div><div id="sidebar-overlay" class="sidebar-overlay"></div>
+{% include 'components/sidebar.html' %}
+<div class="main-content">
+    <nav class="top-navbar"><div class="left"><button id="sidebar-toggle" class="toggle-btn"><i class="bi bi-list"></i></button><h1 class="page-title">Reportes</h1></div><div class="right"><button class="btn-logout" id="btn-logout" title="Cerrar sesi&oacute;n"><i class="bi bi-box-arrow-right"></i></button></div></nav>
+    <div class="content-area">
+        <div class="card mb-4">
+            <div class="card-header"><h6><i class="bi bi-file-earmark-text"></i> Reporte Ejecutivo</h6></div>
+            <div class="card-body">
+                <div id="executive-report"><div class="loading-placeholder"><span class="loading-spinner"></span> Cargando reporte...</div></div>
+            </div>
+        </div>
+        <div class="row g-3" data-perm="reports_export">
+            <div class="col-md-4">
+                <div class="card"><div class="card-header"><h6><i class="bi bi-people"></i> Pacientes</h6></div>
+                <div class="card-body text-center"><p class="text-muted text-sm mb-3">Exportar todos los pacientes</p>
+                <a href="/api/v1/reports/export/patients/?fmt=csv" class="btn btn-primary btn-sm"><i class="bi bi-filetype-csv"></i> CSV</a>
+                <a href="/api/v1/reports/export/patients/?fmt=json" class="btn btn-outline btn-sm ms-2"><i class="bi bi-filetype-json"></i> JSON</a></div></div>
+            </div>
+            <div class="col-md-4">
+                <div class="card"><div class="card-header"><h6><i class="bi bi-exclamation-triangle"></i> Riesgo Alto/Cr&iacute;tico</h6></div>
+                <div class="card-body text-center"><p class="text-muted text-sm mb-3">Exportar pacientes de alto riesgo</p>
+                <a href="/api/v1/reports/export/risk/?fmt=csv" class="btn btn-danger btn-sm"><i class="bi bi-filetype-csv"></i> CSV</a>
+                <a href="/api/v1/reports/export/risk/?fmt=json" class="btn btn-outline btn-sm ms-2"><i class="bi bi-filetype-json"></i> JSON</a></div></div>
+            </div>
+            <div class="col-md-4">
+                <div class="card"><div class="card-header"><h6><i class="bi bi-arrow-repeat"></i> ETL</h6></div>
+                <div class="card-body text-center"><p class="text-muted text-sm mb-3">Exportar historial ETL</p>
+                <a href="/api/v1/reports/export/etl/?fmt=csv" class="btn btn-primary btn-sm"><i class="bi bi-filetype-csv"></i> CSV</a>
+                <a href="/api/v1/reports/export/etl/?fmt=json" class="btn btn-outline btn-sm ms-2"><i class="bi bi-filetype-json"></i> JSON</a></div></div>
+            </div>
+        </div>
+    </div>
+</div>
+<script src="/static/js/dashboard.js"></script>
+<script>
+var currentUserRole = null;
+document.addEventListener('DOMContentLoaded', async () => {
+    setupSidebar();
+    await checkAuth();
+    if (!currentUserRole || !ROLE_PERMISSIONS[currentUserRole]?.includes('reports')) return;
+    const data = await apiRequest('/reports/executive/');
+    if (data?.data) {
+        const r = data.data;
+        document.getElementById('executive-report').innerHTML = `
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <h6 class="mb-3" style="font-size:.78rem;text-transform:uppercase;letter-spacing:.04em;color:var(--text-secondary);">Resumen General</h6>
+                    <table class="table-custom w-100">
+                        <tr><td style="padding:.35rem .5rem;">Total Pacientes</td><td style="padding:.35rem .5rem;" class="fw-600">${r.summary.total_patients}</td></tr>
+                        <tr><td style="padding:.35rem .5rem;">Ejecuciones ETL</td><td style="padding:.35rem .5rem;" class="fw-600">${r.summary.total_etl_executions}</td></tr>
+                        <tr><td style="padding:.35rem .5rem;">Exitosas</td><td style="padding:.35rem .5rem;" class="fw-600" style="color:var(--success);">${r.summary.successful_etl}</td></tr>
+                        <tr><td style="padding:.35rem .5rem;">Fallidas</td><td style="padding:.35rem .5rem;" class="fw-600" style="color:var(--danger);">${r.summary.failed_etl}</td></tr>
+                        <tr><td style="padding:.35rem .5rem;">Registros Procesados</td><td style="padding:.35rem .5rem;" class="fw-600">${r.summary.total_records_processed}</td></tr>
+                        <tr><td style="padding:.35rem .5rem;">Calidad Promedio</td><td style="padding:.35rem .5rem;" class="fw-600">${r.summary.average_quality_score}%</td></tr>
+                    </table>
+                </div>
+                <div class="col-md-4">
+                    <h6 class="mb-3" style="font-size:.78rem;text-transform:uppercase;letter-spacing:.04em;color:var(--text-secondary);">An&aacute;lisis de Riesgo</h6>
+                    <table class="table-custom w-100">
+                        ${Object.entries(r.risk_analysis).map(([k,v]) => `<tr><td style="padding:.35rem .5rem;text-transform:capitalize;">${k}</td><td style="padding:.35rem .5rem;" class="fw-600">${v}</td></tr>`).join('')}
+                    </table>
+                </div>
+                <div class="col-md-4">
+                    <h6 class="mb-3" style="font-size:.78rem;text-transform:uppercase;letter-spacing:.04em;color:var(--text-secondary);">Demogr&aacute;ficas</h6>
+                    <table class="table-custom w-100">
+                        <tr><td style="padding:.35rem .5rem;">Edad Promedio</td><td style="padding:.35rem .5rem;" class="fw-600">${r.demographics.avg_age}</td></tr>
+                        <tr><td style="padding:.35rem .5rem;">IMC Promedio</td><td style="padding:.35rem .5rem;" class="fw-600">${r.demographics.avg_bmi}</td></tr>
+                        <tr><td style="padding:.35rem .5rem;">Glucosa Promedio</td><td style="padding:.35rem .5rem;" class="fw-600">${r.demographics.avg_glucose}</td></tr>
+                        <tr><td style="padding:.35rem .5rem;">Hipertensos</td><td style="padding:.35rem .5rem;" class="fw-600">${r.demographics.hypertensive}</td></tr>
+                        <tr><td style="padding:.35rem .5rem;">Diab&eacute;ticos</td><td style="padding:.35rem .5rem;" class="fw-600">${r.demographics.diabetic}</td></tr>
+                        <tr><td style="padding:.35rem .5rem;">Fumadores</td><td style="padding:.35rem .5rem;" class="fw-600">${r.demographics.smokers}</td></tr>
+                    </table>
+                </div>
+            </div>
+            ${r.top_diagnoses?.length ? `<h6 class="mt-3 mb-2" style="font-size:.78rem;text-transform:uppercase;letter-spacing:.04em;color:var(--text-secondary);">Top Diagn&oacute;sticos</h6><div class="d-flex gap-2 flex-wrap">${r.top_diagnoses.map(d => `<span class="risk-badge risk-medium">${d.diagnosis}: ${d.count}</span>`).join('')}</div>` : ''}
+        `;
+    }
+});
+</script>
+</body>
+</html>

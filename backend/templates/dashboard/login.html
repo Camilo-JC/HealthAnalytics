@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Healthcare ETL Platform</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            min-height: 100vh; display: flex; background: #0f172a;
+            -webkit-font-smoothing: antialiased;
+        }
+        .login-container { margin: auto; width: 100%; max-width: 400px; padding: 1.5rem; }
+        .login-card {
+            background: rgba(255,255,255,.04); backdrop-filter: blur(24px);
+            border: 1px solid rgba(255,255,255,.08); border-radius: 16px; padding: 2.5rem;
+        }
+        .login-logo { text-align: center; margin-bottom: 2rem; }
+        .login-logo .logo-icon {
+            width: 48px; height: 48px; background: linear-gradient(135deg,#3b82f6,#2563eb);
+            border-radius: 12px; display: flex; align-items: center; justify-content: center;
+            margin: 0 auto 1rem; font-size: 1.3rem; color: #fff; font-weight: 800;
+            box-shadow: 0 8px 24px rgba(59,130,246,.25);
+        }
+        .login-logo h1 { color: #f8fafc; font-size: 1.2rem; font-weight: 700; letter-spacing: -.3px; }
+        .login-logo p { color: rgba(255,255,255,.4); font-size: .82rem; margin-top: .25rem; }
+        .form-group { margin-bottom: 1.25rem; }
+        .form-group label {
+            display: block; color: rgba(255,255,255,.6); font-size: .75rem;
+            font-weight: 500; margin-bottom: .35rem; letter-spacing: .02em;
+        }
+        .form-group .input-wrapper {
+            position: relative; display: flex; align-items: center;
+        }
+        .form-group .input-wrapper .input-icon {
+            position: absolute; left: .85rem; color: rgba(255,255,255,.25);
+            font-size: 1rem; pointer-events: none;
+        }
+        .form-group input {
+            width: 100%; padding: .7rem .85rem .7rem 2.4rem;
+            background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1);
+            border-radius: 10px; color: #f8fafc; font-size: .85rem;
+            font-family: 'Inter', sans-serif; transition: all .2s ease;
+        }
+        .form-group input:focus {
+            outline: none; border-color: #3b82f6; background: rgba(59,130,246,.08);
+            box-shadow: 0 0 0 3px rgba(59,130,246,.15);
+        }
+        .form-group input::placeholder { color: rgba(255,255,255,.2); }
+        .btn-login {
+            width: 100%; padding: .7rem; border: none; border-radius: 10px;
+            background: linear-gradient(135deg,#3b82f6,#2563eb); color: #fff;
+            font-size: .85rem; font-weight: 600; font-family: 'Inter', sans-serif;
+            cursor: pointer; transition: all .2s ease; display: flex;
+            align-items: center; justify-content: center; gap: .5rem;
+        }
+        .btn-login:hover { transform: translateY(-1px); box-shadow: 0 8px 24px rgba(59,130,246,.3); }
+        .btn-login:disabled { opacity: .6; cursor: not-allowed; transform: none; box-shadow: none; }
+        .login-error {
+            color: #fca5a5; font-size: .78rem; margin-top: .75rem;
+            text-align: center; display: none;
+        }
+        .login-footer { text-align: center; margin-top: 1.5rem; }
+        .login-footer small { color: rgba(255,255,255,.25); font-size: .7rem; }
+        .login-footer small a { color: rgba(255,255,255,.4); text-decoration: none; }
+        .login-footer small a:hover { color: rgba(255,255,255,.6); }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-card">
+            <div class="login-logo">
+                <div class="logo-icon">H</div>
+                <h1>Healthcare ETL Platform</h1>
+                <p>Accede al panel de control</p>
+            </div>
+            <form id="login-form">
+                <div class="form-group">
+                    <label for="email">Correo electrónico</label>
+                    <div class="input-wrapper">
+                        <i class="bi bi-envelope input-icon"></i>
+                        <input type="email" id="email" placeholder="admin@healthcare-etl.com" required autocomplete="email">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="password">Contraseña</label>
+                    <div class="input-wrapper">
+                        <i class="bi bi-lock input-icon"></i>
+                        <input type="password" id="password" placeholder="Ingresa tu contraseña" required autocomplete="current-password">
+                    </div>
+                </div>
+                <button type="submit" class="btn-login" id="login-btn">
+                    <i class="bi bi-box-arrow-in-right"></i>
+                    <span>Iniciar sesión</span>
+                </button>
+                <div class="login-error" id="login-error"></div>
+            </form>
+            <div class="login-footer">
+                <small>&copy; 2026 Healthcare ETL Platform</small>
+            </div>
+        </div>
+    </div>
+    <script>
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('login-btn');
+            const errorEl = document.getElementById('login-error');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="loading-spinner"></span> Ingresando...';
+            errorEl.style.display = 'none';
+            try {
+                const res = await fetch('/api/v1/auth/login/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email: document.getElementById('email').value,
+                        password: document.getElementById('password').value,
+                    }),
+                });
+                const data = await res.json();
+                if (data.access) {
+                    localStorage.setItem('access_token', data.access);
+                    localStorage.setItem('refresh_token', data.refresh);
+                    window.location.href = '/';
+                } else {
+                    errorEl.textContent = data.errors?.[0]?.message || 'Credenciales inválidas';
+                    errorEl.style.display = 'block';
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="bi bi-box-arrow-in-right"></i><span>Iniciar sesión</span>';
+                }
+            } catch (err) {
+                errorEl.textContent = 'Error de conexión';
+                errorEl.style.display = 'block';
+                btn.disabled = false;
+                btn.innerHTML = '<i class="bi bi-box-arrow-in-right"></i><span>Iniciar sesión</span>';
+            }
+        });
+        const style = document.createElement('style');
+        style.textContent = '.loading-spinner{display:inline-block;width:1rem;height:1rem;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}';
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>

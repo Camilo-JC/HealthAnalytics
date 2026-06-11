@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anal&iacute;tica — Healthcare ETL</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.plot.ly/plotly-2.29.1.min.js"></script>
+    <link href="/static/css/dashboard.css" rel="stylesheet">
+</head>
+<body>
+<div id="toast-container" class="toast-container"></div><div id="sidebar-overlay" class="sidebar-overlay"></div>
+{% include 'components/sidebar.html' %}
+<div class="main-content">
+    <nav class="top-navbar"><div class="left"><button id="sidebar-toggle" class="toggle-btn"><i class="bi bi-list"></i></button><h1 class="page-title">Anal&iacute;tica Cl&iacute;nica</h1></div><div class="right"><button class="btn-logout" id="btn-logout" title="Cerrar sesi&oacute;n"><i class="bi bi-box-arrow-right"></i></button></div></nav>
+    <div class="content-area">
+        <div class="row g-3 mb-4">
+            <div class="col-lg-8">
+                <div class="card">
+                    <div class="card-header"><h6><i class="bi bi-grid-3x3-gap"></i> Matriz de Correlaci&oacute;n</h6></div>
+                    <div class="card-body"><div id="correlation-heatmap" class="chart-container chart-container-lg" style="min-height:500px;"><div class="loading-placeholder"><span class="loading-spinner"></span> Cargando matriz...</div></div></div>
+                </div>
+            </div>
+            <div class="col-lg-4">
+                <div class="card">
+                    <div class="card-header"><h6><i class="bi bi-lightbulb"></i> Insights Clave</h6></div>
+                    <div class="card-body" id="insights-list"><div class="loading-placeholder"><span class="loading-spinner"></span> Cargando insights...</div></div>
+                </div>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-header"><h6><i class="bi bi-bar-chart"></i> Tendencias por Grupo de Edad</h6></div>
+            <div class="card-body"><div id="age-trend-chart" class="chart-container chart-container-lg" style="min-height:400px;"><div class="loading-placeholder"><span class="loading-spinner"></span> Cargando tendencias...</div></div></div>
+        </div>
+    </div>
+</div>
+<script src="/static/js/dashboard.js"></script>
+<script>
+async function loadAnalytics() {
+    const [statsData, corrData, trendData] = await Promise.all([
+        apiRequest('/analytics/stats/'),
+        apiRequest('/analytics/correlations/'),
+        apiRequest('/analytics/trends/'),
+    ]);
+    if (corrData?.data) {
+        const fields = Object.keys(corrData.data);
+        const values = fields.map(f => fields.map(g => corrData.data[f][g] || 0));
+        Plotly.newPlot('correlation-heatmap', [{
+            z: values, x: fields, y: fields, type: 'heatmap',
+            colorscale: [[0,'#ef4444'],[0.25,'#f97316'],[0.5,'#f1f5f9'],[0.75,'#3b82f6'],[1,'#1d4ed8']],
+            zmin: -1, zmax: 1,
+            hovertemplate: '%{x} vs %{y}: %{z:.3f}<extra></extra>',
+        }], { margin: { l: 120, b: 120, t: 20, r: 20 }, height: 500, xaxis: { tickangle: -45 } });
+    }
+    if (trendData?.data) {
+        const traceData = ['critical','high','medium','low'].map(risk => ({
+            x: trendData.data.risk_by_age_group.map(d => d.group),
+            y: trendData.data.risk_by_age_group.map(d => d[risk]),
+            name: risk.charAt(0).toUpperCase() + risk.slice(1), type: 'bar',
+            marker: { color: { critical:'#ef4444', high:'#f97316', medium:'#f59e0b', low:'#10b981' }[risk] }
+        }));
+        Plotly.newPlot('age-trend-chart', traceData, { barmode: 'stack', margin: { t: 20, r: 20, l: 60, b: 40 } });
+    }
+    if (statsData?.data) {
+        const s = statsData.data;
+        const insights = [
+            { icon: 'bi-people', label: 'Total Pacientes', value: s.total_patients },
+            { icon: 'bi-exclamation-triangle', label: 'Cr&iacute;ticos', value: s.critical_patients, color: 'var(--danger)' },
+            { icon: 'bi-heart-pulse', label: 'Hipertensos', value: s.hypertensive, color: 'var(--warning)' },
+            { icon: 'bi-droplet', label: 'Diab&eacute;ticos', value: s.diabetic, color: '#ec4899' },
+            { icon: 'bi-x-circle', label: 'Fumadores', value: s.smokers, color: 'var(--success)' },
+        ];
+        document.getElementById('insights-list').innerHTML = insights.map(i =>
+            `<div class="d-flex align-center justify-between mb-2" style="padding:.4rem 0;border-bottom:1px solid var(--border-light)">
+                <span><i class="${i.icon}" style="color:${i.color || 'var(--text-secondary)'};width:1.5rem;"></i> ${i.label}</span>
+                <strong>${i.value}</strong>
+            </div>`
+        ).join('');
+    }
+}
+document.addEventListener('DOMContentLoaded', async () => {
+    setupSidebar();
+    await checkAuth();
+    await loadAnalytics();
+});
+</script>
+</body>
+</html>

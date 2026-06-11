@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pacientes — Healthcare ETL</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.css" rel="stylesheet">
+    <link href="/static/css/dashboard.css" rel="stylesheet">
+</head>
+<body>
+    <div id="toast-container" class="toast-container"></div>
+    <div id="sidebar-overlay" class="sidebar-overlay"></div>
+    {% include 'components/sidebar.html' %}
+    <div class="main-content">
+        <nav class="top-navbar">
+            <div class="left"><button id="sidebar-toggle" class="toggle-btn"><i class="bi bi-list"></i></button><h1 class="page-title">Gesti&oacute;n de Pacientes</h1></div>
+            <div class="right"><button class="btn-logout" id="btn-logout" title="Cerrar sesi&oacute;n"><i class="bi bi-box-arrow-right"></i></button></div>
+        </nav>
+        <div class="content-area">
+            <div class="card">
+                <div class="card-header">
+                    <h6><i class="bi bi-people"></i> Todos los Pacientes</h6>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-primary btn-sm" id="btn-import-csv" data-perm="patients_manage" onclick="document.getElementById('import-csv').click()"><i class="bi bi-upload"></i> Importar CSV</button>
+                        <input type="file" id="import-csv" accept=".csv,.xlsx" style="display:none">
+                        <button class="btn btn-outline btn-sm" onclick="exportPatients()"><i class="bi bi-download"></i> Exportar</button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="table-controls">
+                        <div class="search-box">
+                            <i class="bi bi-search search-icon"></i>
+                            <input type="text" id="patient-search" placeholder="Buscar por ID, nombre, documento...">
+                        </div>
+                        <div class="filter-group">
+                            <select class="form-select form-select-sm" id="filter-risk" style="width:auto;" onchange="loadPatientsTable()">
+                                <option value="">Todos los riesgos</option>
+                                <option value="critical">Cr&iacute;tico</option>
+                                <option value="high">Alto</option>
+                                <option value="medium">Medio</option>
+                                <option value="low">Bajo</option>
+                            </select>
+                            <select class="form-select form-select-sm" id="filter-gender" style="width:auto;" onchange="loadPatientsTable()">
+                                <option value="">Todos los sexos</option>
+                                <option value="M">Masculino</option>
+                                <option value="F">Femenino</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="table-container">
+                        <table class="table-custom">
+                            <thead>
+                                <tr><th>ID</th><th>Nombre</th><th>Edad</th><th>Sexo</th><th>IMC</th><th>Riesgo</th><th>Diagn&oacute;stico</th><th>Glucosa</th><th>PAS</th><th>Fumador</th><th>Registro</th></tr>
+                            </thead>
+                            <tbody id="patients-table-body"><tr><td colspan="11" class="text-center text-muted py-4"><span class="loading-spinner"></span> Cargando pacientes...</td></tr></tbody>
+                        </table>
+                    </div>
+                    <div id="patients-pagination" class="table-pagination"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="/static/js/dashboard.js"></script>
+    <script>
+        async function exportPatients() {
+            const data = await apiRequest('/patients/export/', { method: 'POST', body: JSON.stringify({ format: 'csv' }) });
+            if (data && data.success !== false) showToast('Exportaci&oacute;n completada', 'success');
+            else showToast(data?.error || 'Error al exportar', 'error');
+        }
+        document.addEventListener('DOMContentLoaded', async () => {
+            setupSidebar(); setupSearch(); setupTabs();
+            document.getElementById('import-csv')?.addEventListener('change', async function(e) {
+                const file = this.files[0];
+                if (!file) return;
+                const formData = new FormData();
+                formData.append('file', file); formData.append('source_name', file.name);
+                const token = getToken();
+                try {
+                    const res = await fetch(`${API_BASE}/patients/bulk_upload/`, {
+                        method: 'POST', headers: { 'Authorization': `Bearer ${token}` }, body: formData,
+                    });
+                    const data = await res.json();
+                    if (data.success) { showToast('Archivo subido. Procesando...', 'success'); setTimeout(() => loadPatientsTable(), 2000); }
+                    else { showToast(data.error || 'Error al subir', 'error'); }
+                } catch (e) { showToast('Error de conexi&oacute;n', 'error'); }
+                this.value = '';
+            });
+            await checkAuth();
+            await loadPatientsTable();
+        });
+    </script>
+</body>
+</html>

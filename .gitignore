@@ -1,0 +1,53 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+*.egg
+*.so
+
+# Virtual Environment
+venv/
+env/
+.venv/
+.env
+
+# Django
+*.log
+logs/
+local_settings.py
+db.sqlite3
+media/avatars/
+media/uploads/
+staticfiles/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Data
+data/raw/*
+data/processed/*
+data/outputs/*
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+!data/outputs/.gitkeep
+
+# ML Models
+backend/models/
+
+# Docker
+docker-compose.override.yml
+
+# Generated Data
+data/outputs/*.xlsx
+data/outputs/*.csv
+
+# OS
+Thumbs.db
+*.pyc

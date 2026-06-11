@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Healthcare ETL — Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <link href="/static/css/dashboard.css" rel="stylesheet">
+    <meta name="csrfmiddlewaretoken" content="{{ csrf_token }}">
+</head>
+<body>
+    <div id="toast-container" class="toast-container"></div>
+    <div id="sidebar-overlay" class="sidebar-overlay"></div>
+    {% include 'components/sidebar.html' %}
+    <div class="main-content">
+        <nav class="top-navbar">
+            <div class="left">
+                <button id="sidebar-toggle" class="toggle-btn"><i class="bi bi-list"></i></button>
+                <h1 class="page-title">Dashboard</h1>
+            </div>
+            <div class="right">
+                <div class="nav-notification" data-perm="patients">
+                    <i class="bi bi-bell"></i>
+                    <span id="alert-count" class="badge bg-danger">0</span>
+                </div>
+                <button class="btn-logout" id="btn-logout" title="Cerrar sesi&oacute;n"><i class="bi bi-box-arrow-right"></i></button>
+            </div>
+        </nav>
+        <div class="content-area">
+            <div class="row g-3 mb-4">
+                <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+                    <div class="card"><div class="kpi-card">
+                        <div class="kpi-icon" style="background:var(--primary-bg);color:var(--primary);"><i class="bi bi-people"></i></div>
+                        <div class="kpi-info"><div class="kpi-label">Total Pacientes</div><div class="kpi-value" id="kpi-total-patients">—</div></div>
+                    </div></div>
+                </div>
+                <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+                    <div class="card"><div class="kpi-card">
+                        <div class="kpi-icon" style="background:var(--danger-bg);color:var(--danger);"><i class="bi bi-exclamation-triangle"></i></div>
+                        <div class="kpi-info"><div class="kpi-label">Cr&iacute;ticos</div><div class="kpi-value" id="kpi-critical">—</div></div>
+                    </div></div>
+                </div>
+                <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+                    <div class="card"><div class="kpi-card">
+                        <div class="kpi-icon" style="background:var(--warning-bg);color:var(--warning);"><i class="bi bi-heart-pulse"></i></div>
+                        <div class="kpi-info"><div class="kpi-label">Hipertensos</div><div class="kpi-value" id="kpi-hypertensive">—</div></div>
+                    </div></div>
+                </div>
+                <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6">
+                    <div class="card"><div class="kpi-card">
+                        <div class="kpi-icon" style="background:#fdf2f8;color:#ec4899;"><i class="bi bi-droplet"></i></div>
+                        <div class="kpi-info"><div class="kpi-label">Diab&eacute;ticos</div><div class="kpi-value" id="kpi-diabetic">—</div></div>
+                    </div></div>
+                </div>
+                <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6" data-perm="dashboard">
+                    <div class="card"><div class="kpi-card">
+                        <div class="kpi-icon" style="background:var(--success-bg);color:var(--success);"><i class="bi bi-x-circle"></i></div>
+                        <div class="kpi-info"><div class="kpi-label">Fumadores</div><div class="kpi-value" id="kpi-smokers">—</div></div>
+                    </div></div>
+                </div>
+                <div class="col-xl-2 col-lg-3 col-md-4 col-sm-6" data-perm="ml">
+                    <div class="card"><div class="kpi-card">
+                        <div class="kpi-icon" style="background:#f5f3ff;color:#8b5cf6;"><i class="bi bi-bullseye"></i></div>
+                        <div class="kpi-info"><div class="kpi-label">Precisi&oacute;n ML</div><div class="kpi-value" id="kpi-model-accuracy">—</div></div>
+                    </div></div>
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-body">
+                    <div class="secondary-kpi-row">
+                        <div class="kpi-item"><small>Riesgo Promedio</small><br><strong id="kpi-avg-risk">—</strong></div>
+                        <div class="kpi-item" data-perm="etl"><small>Ejecuciones ETL</small><br><strong id="kpi-etl-executions">—</strong></div>
+                        <div class="kpi-item" data-perm="etl"><small>Registros Procesados</small><br><strong id="kpi-etl-records">—</strong></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-3 mb-4">
+                <div class="col-lg-4 col-md-6">
+                    <div class="card"><div class="card-header"><h6><i class="bi bi-pie-chart"></i> Distribuci&oacute;n de Riesgo</h6></div>
+                    <div class="card-body"><div class="chart-container chart-container-sm"><canvas id="chart-risk"></canvas></div></div></div>
+                </div>
+                <div class="col-lg-4 col-md-6">
+                    <div class="card"><div class="card-header"><h6><i class="bi bi-gender-ambiguous"></i> Distribuci&oacute;n por Sexo</h6></div>
+                    <div class="card-body"><div class="chart-container chart-container-sm"><canvas id="chart-gender"></canvas></div></div></div>
+                </div>
+                <div class="col-lg-4 col-md-6">
+                    <div class="card"><div class="card-header"><h6><i class="bi bi-bar-chart"></i> Distribuci&oacute;n por Edad</h6></div>
+                    <div class="card-body"><div class="chart-container chart-container-sm"><canvas id="chart-age"></canvas></div></div></div>
+                </div>
+            </div>
+
+            <div class="row g-3 mb-4">
+                <div class="col-lg-6">
+                    <div class="card"><div class="card-header"><h6><i class="bi bi-activity"></i> Distribuci&oacute;n IMC</h6></div>
+                    <div class="card-body"><div class="chart-container chart-container-sm"><canvas id="chart-bmi"></canvas></div></div></div>
+                </div>
+                <div class="col-lg-6">
+                    <div class="card"><div class="card-header"><h6><i class="bi bi-file-medical"></i> Top Diagn&oacute;sticos</h6></div>
+                    <div class="card-body"><div class="chart-container chart-container-sm"><canvas id="chart-diagnosis"></canvas></div></div></div>
+                </div>
+            </div>
+
+            <div class="row g-3 mb-4">
+                <div class="col-lg-8">
+                    <div class="card">
+                        <div class="card-header">
+                            <h6><i class="bi bi-table"></i> Pacientes Recientes</h6>
+                            <div class="d-flex gap-2">
+                                <select id="filter-risk" class="form-select form-select-sm" style="width:auto;" onchange="loadPatientsTable()">
+                                    <option value="">Todos los riesgos</option>
+                                    <option value="critical">Cr&iacute;tico</option>
+                                    <option value="high">Alto</option>
+                                    <option value="medium">Medio</option>
+                                    <option value="low">Bajo</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-controls">
+                                <div class="search-box">
+                                    <i class="bi bi-search search-icon"></i>
+                                    <input type="text" id="patient-search" placeholder="Buscar pacientes...">
+                                </div>
+                            </div>
+                            <div class="table-container">
+                                <table class="table-custom">
+                                    <thead>
+                                        <tr><th>ID</th><th>Nombre</th><th>Edad</th><th>Sexo</th><th>IMC</th><th>Riesgo</th><th>Diagn&oacute;stico</th><th>Fumador</th><th>Registro</th></tr>
+                                    </thead>
+                                    <tbody id="patients-table-body">
+                                        <tr><td colspan="9" class="text-center text-muted py-4"><span class="loading-spinner"></span> Cargando...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div id="patients-pagination" class="table-pagination"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-4" data-perm="patients">
+                    <div class="card">
+                        <div class="card-header"><h6><i class="bi bi-bell"></i> Alertas Cl&iacute;nicas</h6></div>
+                        <div class="card-body" id="alerts-list">
+                            <div class="loading-placeholder"><span class="loading-spinner"></span> Cargando alertas...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row g-3">
+                <div class="col-lg-6" data-perm="etl">
+                    <div class="card">
+                        <div class="card-header"><h6><i class="bi bi-arrow-repeat"></i> Historial ETL</h6></div>
+                        <div class="card-body">
+                            <div class="table-container">
+                                <table class="table-custom">
+                                    <thead><tr><th>ID</th><th>Fuente</th><th>Estado</th><th>Registros</th><th>Calidad</th><th>Duraci&oacute;n</th><th>Ejecut&oacute;</th><th>Fecha</th></tr></thead>
+                                    <tbody id="etl-table-body"><tr><td colspan="8" class="text-center text-muted py-4"><span class="loading-spinner"></span> Cargando...</td></tr></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-6" data-perm="ml">
+                    <div class="card">
+                        <div class="card-header"><h6><i class="bi bi-cpu"></i> Modelos ML</h6></div>
+                        <div class="card-body" id="ml-comparison">
+                            <div class="loading-placeholder"><span class="loading-spinner"></span> Cargando modelos...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="/static/js/dashboard.js"></script>
+</body>
+</html>
