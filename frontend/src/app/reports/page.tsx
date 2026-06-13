@@ -77,7 +77,7 @@ function ReportsContent() {
         </CardContent></Card>
         <Card><CardContent className="p-4 text-center">
           <p className="stat-label">Riesgo Promedio</p>
-          <p className="stat-value">{demo?.avg_age ? `${demo.avg_age} años` : '—'}</p>
+          <p className="stat-value">{demo?.avg_risk ? `${demo.avg_risk}%` : '—'}</p>
         </CardContent></Card>
         <Card><CardContent className="p-4 text-center">
           <p className="stat-label">Calidad ETL</p>

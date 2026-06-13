@@ -148,6 +148,7 @@ def _dashboard_view(template_name, required_perm):
                     jwt_auth = JWTAuthentication()
                     validated_token = jwt_auth.get_validated_token(token)
                     user = jwt_auth.get_user(validated_token)
+                    request.user = user
                 except Exception:
                     pass
         if not user.is_authenticated:

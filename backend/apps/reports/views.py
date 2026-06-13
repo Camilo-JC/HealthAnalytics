@@ -56,6 +56,7 @@ def executive_report(request):
         'avg_age': round(float(patients.aggregate(Avg('age'))['age__avg'] or 0), 1),
         'avg_bmi': round(float(patients.aggregate(Avg('bmi'))['bmi__avg'] or 0), 1),
         'avg_glucose': round(float(patients.aggregate(Avg('glucose'))['glucose__avg'] or 0), 1),
+        'avg_risk': round(float(patients.aggregate(Avg('risk_score'))['risk_score__avg'] or 0), 2),
         'hypertensive': patients.filter(systolic_bp__gte=140).count(),
         'diabetic': patients.filter(glucose__gte=126).count(),
         'smokers': patients.filter(smoking=True).count(),

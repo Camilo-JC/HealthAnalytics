@@ -246,6 +246,9 @@ class PatientViewSet(viewsets.ModelViewSet):
         export_format = serializer.validated_data['format']
         filters_data = serializer.validated_data.get('filters', {})
 
+        ALLOWED_FILTERS = {'risk_category', 'gender', 'diagnosis', 'bmi_category', 'is_valid', 'age', 'smoking'}
+        filters_data = {k: v for k, v in filters_data.items() if k in ALLOWED_FILTERS}
+
         queryset = Patient.objects.all()
         if filters_data:
             queryset = queryset.filter(**filters_data)

@@ -209,6 +209,7 @@ class MLTrainer:
             }
 
         self.results = results
+        results['feature_names'] = feature_names
 
         best_model_key = max(results, key=lambda k: results[k]['f1_score'])
         results['best_model'] = best_model_key

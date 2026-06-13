@@ -176,5 +176,13 @@
         </div>
     </div>
     <script src="/static/js/dashboard.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            setupSidebar(); setupSearch();
+            await checkAuth();
+            loadPatientsTable();
+            loadAlerts();
+        });
+    </script>
 </body>
 </html>

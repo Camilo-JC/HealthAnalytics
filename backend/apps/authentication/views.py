@@ -132,7 +132,10 @@ class CustomTokenObtainPairView(TokenObtainPairView):
     def post(self, request, *args, **kwargs):
         response = super().post(request, *args, **kwargs)
         if response.status_code == 200:
-            user = get_object_or_404(User, email=request.data.get('email'))
+            email = request.data.get('email')
+            if not email:
+                return Response({'error': 'Email es requerido'}, status=400)
+            user = get_object_or_404(User, email=email)
             response.data['user'] = UserSerializer(user).data
             response.data['success'] = True
         return response

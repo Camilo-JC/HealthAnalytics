@@ -57,7 +57,7 @@ function ETLContent() {
   const handleExecute = async (sourceId: number) => {
     setExecuting(true);
     try {
-      await apiRequest('/etl/executions/execute/', { method: 'POST', body: JSON.stringify({ data_source_id: sourceId }) });
+      await apiRequest('/etl/executions/execute/', { method: 'POST', body: JSON.stringify({ source_id: sourceId }) });
       toast.success('ETL ejecutado exitosamente');
       loadData();
     } catch (err: unknown) {
