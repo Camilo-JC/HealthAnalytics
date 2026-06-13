@@ -124,6 +124,7 @@
                 if (data.access) {
                     localStorage.setItem('access_token', data.access);
                     localStorage.setItem('refresh_token', data.refresh);
+                    document.cookie = 'access_token=' + data.access + '; path=/; max-age=86400';
                     window.location.href = '/';
                 } else {
                     errorEl.textContent = data.errors?.[0]?.message || 'Credenciales inválidas';

@@ -2,9 +2,11 @@ from django.db.models import Count, Avg, Sum
 from django.utils import timezone
 from datetime import timedelta
 from django.shortcuts import render
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, authentication_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from rest_framework_simplejwt.authentication import JWTAuthentication
+from rest_framework.authentication import SessionAuthentication
 from core.rbac import has_module_permission
 
 
@@ -138,7 +140,19 @@ def dashboard_alerts(request):
 
 def _dashboard_view(template_name, required_perm):
     def view_fn(request):
-        if not request.user.is_authenticated or not has_module_permission(request.user, required_perm):
+        user = request.user
+        if not user.is_authenticated:
+            token = request.COOKIES.get('access_token', '')
+            if token:
+                try:
+                    jwt_auth = JWTAuthentication()
+                    validated_token = jwt_auth.get_validated_token(token)
+                    user = jwt_auth.get_user(validated_token)
+                except Exception:
+                    pass
+        if not user.is_authenticated:
+            return render(request, 'dashboard/login.html')
+        if not has_module_permission(user, required_perm):
             return render(request, 'dashboard/login.html', {'error': 'No tienes permiso para acceder a esta página'})
         return render(request, template_name)
     return view_fn
