@@ -8,4 +8,5 @@ mkdir -p /app/backend/logs
 python manage.py migrate --noinput
 python manage.py collectstatic --noinput --clear
 
-exec gunicorn --bind 0.0.0.0:8000 --workers 4 --timeout 120 config.wsgi:application
+WORKERS=${WEB_CONCURRENCY:-2}
+exec gunicorn --bind 0.0.0.0:8000 --workers $WORKERS --timeout 120 config.wsgi:application
