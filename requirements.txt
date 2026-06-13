@@ -9,7 +9,7 @@ python-decouple>=3.8
 python-dotenv>=1.0.0
 psycopg2-binary>=2.9.0
 whitenoise>=6.8.0
-# gunicorn no funciona en Windows, se usa solo en Linux/Docker
+gunicorn>=23.0.0  # Solo Linux/Docker (no funciona en Windows)
 
 # Data Science
 numpy>=2.1.0
@@ -25,6 +25,11 @@ plotly>=5.24.0
 # Task Queue
 celery>=5.4.0
 redis>=5.2.0
+
+# Templates & Admin
+django-crispy-forms>=2.6.0
+crispy-bootstrap5>=2024.0
+django-import-export>=4.0.0
 
 # Utilities
 python-dateutil>=2.9.0

@@ -74,8 +74,29 @@ TEMPLATES = [
 WSGI_APPLICATION = 'config.wsgi.application'
 
 # Database (auto-detect: SQLite si no hay PostgreSQL configurado)
-import sys
-if 'test' in sys.argv or not config('DB_HOST', default=''):
+# Soporta DATABASE_URL (Render/Neon) o variables DB_* individuales
+import sys, re
+database_url = os.environ.get('DATABASE_URL', '')
+if database_url:
+    import urllib.parse
+    parsed = urllib.parse.urlparse(database_url)
+    db_name = parsed.path.lstrip('/').split('?')[0]
+    query_params = urllib.parse.parse_qs(parsed.query)
+    sslmode = query_params.get('sslmode', ['require'])[0]
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': db_name,
+            'USER': parsed.username,
+            'PASSWORD': parsed.password,
+            'HOST': parsed.hostname,
+            'PORT': parsed.port or '5432',
+            'ATOMIC_REQUESTS': True,
+            'CONN_MAX_AGE': 60,
+            'OPTIONS': {'sslmode': sslmode},
+        }
+    }
+elif 'test' in sys.argv or not config('DB_HOST', default=''):
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',

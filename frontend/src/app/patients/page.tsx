@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { apiRequest } from '@/lib/api';
 import { formatDate, getRiskColor, getRiskLabel, translateGender } from '@/lib/utils';
-import { Plus, Search, Filter, Download, ChevronLeft, ChevronRight, AlertTriangle } from 'lucide-react';
+import { Plus, Search, Filter, Download, ChevronLeft, ChevronRight } from 'lucide-react';
 import type { Patient } from '@/types';
 
 function PatientsContent() {

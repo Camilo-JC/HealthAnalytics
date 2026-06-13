@@ -7,7 +7,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { apiRequest } from '@/lib/api';
-import { formatNumber, getRiskColor, getRiskLabel, formatPercent } from '@/lib/utils';
+import { formatNumber, getRiskColor, getRiskLabel } from '@/lib/utils';
 import { FileText, Download, FileSpreadsheet, FileDown } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import type { ReportData } from '@/types';

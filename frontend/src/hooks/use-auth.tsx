@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
-import { apiRequest, login as apiLogin, clearTokens, getStoredUser, storeUser, getProfile } from '@/lib/api';
+import { login as apiLogin, clearTokens, getStoredUser, storeUser, getProfile } from '@/lib/api';
 import type { User } from '@/types';
 
 interface AuthContextType {

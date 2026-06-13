@@ -104,7 +104,7 @@ def correlation_analysis(request):
     corr = df.corr().round(3)
     corr_matrix = {
         str(col): {
-            str(idx): float(val)
+            str(idx): (float(val) if not pd.isna(val) else None)
             for idx, val in row.items()
         }
         for col, row in corr.iterrows()
