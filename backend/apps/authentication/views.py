@@ -1,3 +1,4 @@
+import os
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from rest_framework import status, generics, permissions
@@ -108,6 +109,26 @@ class ChangePasswordView(APIView):
         request.user.set_password(serializer.validated_data['new_password'])
         request.user.save()
         return Response({'success': True, 'message': 'Contraseña actualizada exitosamente'})
+
+
+class SetupAdminView(APIView):
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request):
+        from django.conf import settings
+        email = getattr(settings, 'ADMIN_EMAIL', os.environ.get('ADMIN_EMAIL', ''))
+        password = getattr(settings, 'ADMIN_PASSWORD', os.environ.get('ADMIN_PASSWORD', ''))
+        if not email or not password:
+            return Response({'error': 'ADMIN_EMAIL and ADMIN_PASSWORD not configured'}, status=400)
+        user, created = User.objects.get_or_create(
+            email=email,
+            defaults={'full_name': 'Administrador', 'role': 'admin', 'is_staff': True, 'is_superuser': True}
+        )
+        if created:
+            user.set_password(password)
+            user.save()
+            return Response({'message': f'Superuser {email} created'})
+        return Response({'message': f'Superuser {email} already exists', 'user_id': user.id})
 
 
 class CustomTokenObtainPairView(TokenObtainPairView):
