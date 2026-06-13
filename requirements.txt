@@ -31,6 +31,9 @@ django-crispy-forms>=2.6.0
 crispy-bootstrap5>=2024.0
 django-import-export>=4.0.0
 
+# Image Processing (required for avatar ImageField)
+Pillow>=10.0.0
+
 # Utilities
 python-dateutil>=2.9.0
 tablib>=3.7.0
