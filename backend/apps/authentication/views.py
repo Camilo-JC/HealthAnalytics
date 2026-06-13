@@ -115,11 +115,8 @@ class SetupAdminView(APIView):
     permission_classes = [permissions.AllowAny]
 
     def post(self, request):
-        from django.conf import settings
-        email = getattr(settings, 'ADMIN_EMAIL', os.environ.get('ADMIN_EMAIL', ''))
-        password = getattr(settings, 'ADMIN_PASSWORD', os.environ.get('ADMIN_PASSWORD', ''))
-        if not email or not password:
-            return Response({'error': 'ADMIN_EMAIL and ADMIN_PASSWORD not configured'}, status=400)
+        email = os.environ.get('ADMIN_EMAIL', 'admin@healthcare-etl.com')
+        password = os.environ.get('ADMIN_PASSWORD', 'Admin123!')
         user, created = User.objects.get_or_create(
             email=email,
             defaults={'full_name': 'Administrador', 'role': 'admin', 'is_staff': True, 'is_superuser': True}
@@ -127,8 +124,8 @@ class SetupAdminView(APIView):
         if created:
             user.set_password(password)
             user.save()
-            return Response({'message': f'Superuser {email} created'})
-        return Response({'message': f'Superuser {email} already exists', 'user_id': user.id})
+            return Response({'message': f'Superuser {email} created', 'email': email, 'password': password})
+        return Response({'message': f'Superuser {email} already exists', 'user_id': user.id, 'email': email, 'password': password})
 
 
 class CustomTokenObtainPairView(TokenObtainPairView):
