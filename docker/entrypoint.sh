@@ -9,7 +9,7 @@ python manage.py migrate --noinput
 python manage.py collectstatic --noinput --clear
 
 if [ -n "$ADMIN_EMAIL" ] && [ -n "$ADMIN_PASSWORD" ]; then
-    DJANGO_SUPERUSER_PASSWORD="$ADMIN_PASSWORD" python manage.py createsuperuser --noinput --email "$ADMIN_EMAIL" 2>/dev/null || true
+    DJANGO_SUPERUSER_PASSWORD="$ADMIN_PASSWORD" python manage.py createsuperuser --noinput --email "$ADMIN_EMAIL" --full_name "Admin" --role admin 2>/dev/null || true
 fi
 
 WORKERS=${WEB_CONCURRENCY:-1}
