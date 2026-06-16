@@ -9,18 +9,20 @@ logger = logging.getLogger('etl')
 def _read_csv_with_fallback(file_path, encoding=None, sep=None):
     encodings = [encoding] if encoding else ['utf-8', 'latin-1', 'cp1252', 'iso-8859-1']
     separators = [sep] if sep else [';', ',', '\t']
+    decimals = [',', '.']
     last_err = None
     for enc in encodings:
         for sep_candidate in separators:
-            try:
-                return pd.read_csv(file_path, encoding=enc, sep=sep_candidate, low_memory=False)
-            except (UnicodeDecodeError, UnicodeError) as e:
-                last_err = e
-                continue
-            except pd.errors.ParserError:
-                continue
-            except Exception:
-                continue
+            for dec in decimals:
+                try:
+                    return pd.read_csv(file_path, encoding=enc, sep=sep_candidate, decimal=dec, low_memory=False)
+                except (UnicodeDecodeError, UnicodeError) as e:
+                    last_err = e
+                    continue
+                except pd.errors.ParserError:
+                    continue
+                except Exception:
+                    continue
         try:
             return pd.read_csv(file_path, encoding=enc, engine='python')
         except (UnicodeDecodeError, UnicodeError) as e:
