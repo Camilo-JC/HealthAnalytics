@@ -6,6 +6,29 @@ from .base import BaseETLComponent
 logger = logging.getLogger('etl')
 
 
+def _read_csv_with_fallback(file_path, encoding=None, sep=None):
+    encodings = [encoding] if encoding else ['utf-8', 'latin-1', 'cp1252', 'iso-8859-1']
+    separators = [sep] if sep else [';', ',', '\t', None]
+    last_err = None
+    for enc in encodings:
+        for sep_candidate in separators:
+            kwargs = {'encoding': enc, 'low_memory': False}
+            if sep_candidate is not None:
+                kwargs['sep'] = sep_candidate
+            try:
+                return pd.read_csv(file_path, **kwargs)
+            except (UnicodeDecodeError, UnicodeError) as e:
+                last_err = e
+                continue
+            except pd.errors.ParserError:
+                continue
+            except Exception:
+                if sep_candidate is not None:
+                    continue
+                raise
+    raise last_err or Exception("No se pudo leer el archivo CSV con ninguna codificación")
+
+
 class Extractor(BaseETLComponent):
     def extract(self, file_path, source_type='excel', encoding=None):
         self.log('info', f"Iniciando extracción: {file_path}", 'EXTRACT')
@@ -14,35 +37,13 @@ class Extractor(BaseETLComponent):
             if ext in ['.xlsx', '.xls'] or source_type == 'excel':
                 df = pd.read_excel(file_path, engine='openpyxl' if ext == '.xlsx' else 'xlrd')
             elif ext == '.csv' or source_type == 'csv':
-                encodings = [encoding] if encoding else ['utf-8', 'latin-1', 'cp1252', 'iso-8859-1']
-                df = None
-                last_err = None
-                for enc in encodings:
-                    try:
-                        df = pd.read_csv(file_path, encoding=enc, low_memory=False, sep=None, engine='python')
-                        break
-                    except (UnicodeDecodeError, UnicodeError) as e:
-                        last_err = e
-                        continue
-                if df is None:
-                    raise last_err or Exception("No se pudo leer el archivo CSV con ninguna codificación")
+                df = _read_csv_with_fallback(file_path, encoding)
             elif ext == '.json':
                 df = pd.read_json(file_path)
             elif ext == '.parquet':
                 df = pd.read_parquet(file_path)
             else:
-                encodings = [encoding] if encoding else ['utf-8', 'latin-1', 'cp1252', 'iso-8859-1']
-                df = None
-                last_err = None
-                for enc in encodings:
-                    try:
-                        df = pd.read_csv(file_path, encoding=enc, low_memory=False, sep=None, engine='python')
-                        break
-                    except (UnicodeDecodeError, UnicodeError) as e:
-                        last_err = e
-                        continue
-                if df is None:
-                    raise last_err or Exception("No se pudo leer el archivo con ninguna codificación")
+                df = _read_csv_with_fallback(file_path, encoding)
 
             self.log('info', f"Extraídas {len(df)} filas, {len(df.columns)} columnas", 'EXTRACT')
             return df
