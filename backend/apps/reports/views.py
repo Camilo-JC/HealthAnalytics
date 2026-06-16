@@ -140,7 +140,7 @@ def export_report(request, report_type):
         response = HttpResponse(content_type='text/csv')
         response['Content-Disposition'] = f'attachment; filename="{filename}.csv"'
         if data:
-            writer = csv.DictWriter(response, fieldnames=data[0].keys())
+            writer = csv.DictWriter(response, fieldnames=list(data[0].keys()) if data else [])
             writer.writeheader()
             for row in data:
                 writer.writerow(row)
@@ -154,4 +154,33 @@ def export_report(request, report_type):
         response['Content-Disposition'] = f'attachment; filename="{filename}.json"'
         return response
 
-    return Response({'success': False, 'error': 'Formato no soportado'})
+    elif fmt == 'xlsx':
+        import openpyxl
+        from openpyxl.styles import Font, Alignment, PatternFill
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = filename[:31]
+        if data:
+            headers = list(data[0].keys())
+            header_fill = PatternFill(start_color='2563EB', end_color='2563EB', fill_type='solid')
+            header_font = Font(color='FFFFFF', bold=True)
+            for c, h in enumerate(headers, 1):
+                cell = ws.cell(row=1, column=c, value=h)
+                cell.fill = header_fill
+                cell.font = header_font
+                cell.alignment = Alignment(horizontal='center')
+            for r, row in enumerate(data, 2):
+                for c, h in enumerate(headers, 1):
+                    ws.cell(row=r, column=c, value=row[h])
+            ws.auto_filter.ref = ws.dimensions
+        for col in ws.columns:
+            max_len = max(len(str(c.value or '')) for c in col) + 2
+            ws.column_dimensions[col[0].column_letter].width = min(max_len, 40)
+        response = HttpResponse(
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        response['Content-Disposition'] = f'attachment; filename="{filename}.xlsx"'
+        wb.save(response)
+        return response
+
+    return Response({'success': False, 'error': 'Formato no soportado'}, status=status.HTTP_400_BAD_REQUEST)

@@ -1,31 +1,45 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
-import { AuthProvider } from '@/hooks/use-auth';
+import { useParams, useRouter } from 'next/navigation';
+import { AuthProvider, useAuth } from '@/hooks/use-auth';
 import { AppLayout } from '@/components/layout/app-layout';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { apiRequest } from '@/lib/api';
 import { getRiskColor, getRiskLabel, getSeverityColor, formatDate, translateGender } from '@/lib/utils';
-import { ArrowLeft, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, AlertTriangle, Trash2 } from 'lucide-react';
 import Link from 'next/link';
+import { toast } from 'sonner';
 import type { Patient, ClinicalAlert } from '@/types';
 
 function PatientDetailContent() {
   const { id } = useParams<{ id: string }>();
+  const router = useRouter();
+  const { hasPermission } = useAuth();
   const [patient, setPatient] = useState<Patient | null>(null);
   const [alerts, setAlerts] = useState<ClinicalAlert[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     Promise.all([
-      apiRequest<{ success: boolean; data: Patient }>(`/patients/${id}/`).then(r => setPatient(r.data)).catch(() => {}),
+      apiRequest<Patient>(`/patients/${id}/`).then(r => setPatient(r)).catch(() => {}),
       apiRequest<{ success: boolean; results: ClinicalAlert[] }>(`/patients/${id}/alerts/`)
         .then(r => setAlerts(r.results || [])).catch(() => {}),
     ]).finally(() => setLoading(false));
   }, [id]);
+
+  const handleDelete = async () => {
+    if (!confirm(`¿Eliminar el paciente "${patient?.first_name} ${patient?.last_name}"? Esta acción no se puede deshacer.`)) return;
+    try {
+      await apiRequest(`/patients/${id}/`, { method: 'DELETE' });
+      toast.success('Paciente eliminado');
+      router.push('/patients');
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Error al eliminar paciente');
+    }
+  };
 
   if (loading) return (
     <div className="page-container flex justify-center pt-12">
@@ -63,6 +77,11 @@ function PatientDetailContent() {
           </div>
         </div>
         <Badge className={getRiskColor(patient.risk_category)}>{getRiskLabel(patient.risk_category)}</Badge>
+        {hasPermission('patients_delete') && (
+          <Button variant="outline" size="sm" className="text-destructive border-destructive/30 hover:bg-destructive/10" onClick={handleDelete}>
+            <Trash2 className="h-4 w-4 mr-2" />Eliminar
+          </Button>
+        )}
       </div>
 
       <div className="grid gap-6 grid-cols-1 lg:grid-cols-3">
@@ -110,7 +129,7 @@ function PatientDetailContent() {
             <div className="flex justify-between"><span className="text-muted-foreground">Diagnóstico</span><span className="font-medium text-right max-w-[60%]">{patient.diagnosis}</span></div>
             <div className="flex justify-between"><span className="text-muted-foreground">Código</span><span className="font-medium">{patient.diagnosis_code || '—'}</span></div>
             <div className="flex justify-between"><span className="text-muted-foreground">Riesgo</span><Badge className={getRiskColor(patient.risk_category)}>{getRiskLabel(patient.risk_category)}</Badge></div>
-            <div className="flex justify-between"><span className="text-muted-foreground">Score</span><span className="font-medium">{patient.risk_score?.toFixed(1)}%</span></div>
+            <div className="flex justify-between"><span className="text-muted-foreground">Score</span><span className="font-medium">{patient.risk_score != null ? `${Number(patient.risk_score).toFixed(1)}%` : '—'}</span></div>
           </CardContent>
         </Card>
 

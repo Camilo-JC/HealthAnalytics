@@ -57,13 +57,35 @@ function ETLContent() {
   const handleExecute = async (sourceId: number) => {
     setExecuting(true);
     try {
-      await apiRequest('/etl/executions/execute/', { method: 'POST', body: JSON.stringify({ source_id: sourceId }) });
+      await apiRequest('/etl/executions/execute/', { method: 'POST', body: JSON.stringify({ source_id: sourceId, run_async: false }) });
       toast.success('ETL ejecutado exitosamente');
       loadData();
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : 'Error al ejecutar ETL');
     } finally {
       setExecuting(false);
+    }
+  };
+
+  const handleDeleteSource = async (sourceId: number, name: string) => {
+    if (!confirm(`¿Eliminar la fuente "${name}"?`)) return;
+    try {
+      await apiRequest(`/etl/sources/${sourceId}/`, { method: 'DELETE' });
+      toast.success('Fuente eliminada');
+      loadData();
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Error al eliminar fuente');
+    }
+  };
+
+  const handleDeleteExecution = async (executionId: number) => {
+    if (!confirm(`¿Eliminar la ejecución #${executionId}?`)) return;
+    try {
+      await apiRequest(`/etl/executions/${executionId}/`, { method: 'DELETE' });
+      toast.success('Ejecución eliminada');
+      loadData();
+    } catch (err: unknown) {
+      toast.error(err instanceof Error ? err.message : 'Error al eliminar ejecución');
     }
   };
 
@@ -110,7 +132,7 @@ function ETLContent() {
                       </Button>
                     )}
                     {hasPermission('etl_delete') && (
-                      <Button variant="ghost" size="icon" className="text-destructive">
+                      <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDeleteSource(s.id, s.name)}>
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     )}
@@ -138,6 +160,7 @@ function ETLContent() {
                   <th className="pb-3 font-medium">Calidad</th>
                   <th className="pb-3 font-medium">Duración</th>
                   <th className="pb-3 font-medium">Fecha</th>
+                  {hasPermission('etl_delete') && <th className="pb-3 font-medium w-10"></th>}
                 </tr>
               </thead>
               <tbody>
@@ -157,11 +180,18 @@ function ETLContent() {
                       <td className="py-3">{e.quality_score != null ? `${e.quality_score}%` : '—'}</td>
                       <td className="py-3">{e.duration_seconds != null ? `${e.duration_seconds.toFixed(1)}s` : '—'}</td>
                       <td className="py-3 text-xs text-muted-foreground">{formatDate(e.created_at)}</td>
+                      {hasPermission('etl_delete') && (
+                        <td className="py-3">
+                          <Button variant="ghost" size="icon" className="text-destructive h-8 w-8" onClick={() => handleDeleteExecution(e.id)}>
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </td>
+                      )}
                     </tr>
                   );
                 })}
                 {executions.length === 0 && (
-                  <tr><td colSpan={9} className="py-8 text-center text-muted-foreground">Sin ejecuciones</td></tr>
+                  <tr><td colSpan={hasPermission('etl_delete') ? 10 : 9} className="py-8 text-center text-muted-foreground">Sin ejecuciones</td></tr>
                 )}
               </tbody>
             </table>

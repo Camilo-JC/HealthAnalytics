@@ -71,13 +71,19 @@ export async function apiRequest<T = unknown>(
 
   const contentType = res.headers.get('content-type') || '';
   if (!res.ok) {
+    const text = await res.text();
+    let msg = `Error ${res.status}`;
     try {
-      const err = await res.json();
-      throw new Error(err.error || err.detail || `Error ${res.status}`);
-    } catch (e: unknown) {
-      if (e instanceof Error) throw e;
-      throw new Error(`Error ${res.status}`);
+      const err = JSON.parse(text);
+      msg = err.error || err.detail || (err.errors?.[0]?.message) || '';
+      if (!msg) {
+        const firstKey = Object.keys(err).find(k => Array.isArray(err[k]));
+        if (firstKey) msg = err[firstKey][0];
+      }
+    } catch {
+      msg = text || msg;
     }
+    throw new Error(msg);
   }
 
   if (contentType.includes('application/json')) return res.json();
@@ -110,16 +116,26 @@ export async function uploadFile(endpoint: string, file: File, extraFields?: Rec
   formData.append('file', file);
   if (extraFields) Object.entries(extraFields).forEach(([k, v]) => formData.append(k, v));
 
-  const res = await fetch(`${API_BASE}${endpoint}`, {
+  let res = await fetch(`${API_BASE}${endpoint}`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${access}` },
     body: formData,
   });
 
   if (res.status === 401) {
-    clearTokens();
-    window.location.href = '/login';
-    throw new Error('Sesión expirada');
+    const refreshed = await refreshToken();
+    if (refreshed) {
+      const { access: newAccess } = getTokens();
+      res = await fetch(`${API_BASE}${endpoint}`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${newAccess}` },
+        body: formData,
+      });
+    } else {
+      clearTokens();
+      window.location.href = '/login';
+      throw new Error('Sesión expirada');
+    }
   }
 
   if (!res.ok) {

@@ -7,7 +7,8 @@ import { KPICard } from '@/components/dashboard/kpi-card';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { apiRequest } from '@/lib/api';
+import { apiRequest, getTokens } from '@/lib/api';
+import { toast } from 'sonner';
 import { formatNumber, getRiskColor, getRiskLabel, getSeverityColor, formatDate } from '@/lib/utils';
 import {
   Users, Heart, Activity, AlertTriangle, TrendingUp, Wind, Award, Download,
@@ -36,6 +37,47 @@ function DashboardContent() {
     ]).finally(() => setLoading(false));
   }, []);
 
+  const handleExport = () => {
+    try {
+      const rows = [
+        ['Métrica', 'Valor'],
+        ['Total Pacientes', stats?.total_patients ?? ''],
+        ['Pacientes Críticos', stats?.critical_patients ?? ''],
+        ['Hipertensos', stats?.hypertensive ?? ''],
+        ['Diabéticos', stats?.diabetic ?? ''],
+        ['Fumadores', stats?.smokers ?? ''],
+        ['Riesgo Promedio', stats?.avg_risk != null ? `${stats.avg_risk.toFixed(1)}%` : ''],
+        ['ETL Ejecuciones', stats?.etl_executions ?? ''],
+        ['Alertas Activas', stats?.active_alerts ?? ''],
+      ];
+
+      if (charts?.risk_distribution) {
+        rows.push([], ['Distribución de Riesgo', '']);
+        charts.risk_distribution.forEach(d => rows.push([d.risk_category || 'Sin riesgo', String(d.count)]));
+      }
+      if (charts?.gender_distribution) {
+        rows.push([], ['Distribución por Género', '']);
+        charts.gender_distribution.forEach(d => rows.push([d.gender === 'M' ? 'Masculino' : 'Femenino', String(d.count)]));
+      }
+      if (charts?.diagnosis_distribution) {
+        rows.push([], ['Top Diagnósticos', '']);
+        charts.diagnosis_distribution.slice(0, 10).forEach(d => rows.push([d.diagnosis || 'Sin diagnóstico', String(d.count)]));
+      }
+
+      const csv = rows.map(r => r.join(',')).join('\r\n');
+      const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `dashboard_${new Date().toISOString().slice(0, 10)}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success('Dashboard exportado');
+    } catch {
+      toast.error('Error al exportar dashboard');
+    }
+  };
+
   if (loading) return (
     <div className="page-container flex items-center justify-center min-h-[60vh]">
       <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
@@ -49,7 +91,7 @@ function DashboardContent() {
           <h2 className="page-title">Dashboard</h2>
           <p className="text-sm text-muted-foreground">Resumen general del sistema</p>
         </div>
-        <Button variant="outline" size="sm"><Download className="h-4 w-4 mr-2" />Exportar</Button>
+        <Button variant="outline" size="sm" onClick={handleExport}><Download className="h-4 w-4 mr-2" />Exportar</Button>
       </div>
 
       {/* KPI Cards */}

@@ -6,7 +6,8 @@ import { AppLayout } from '@/components/layout/app-layout';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { apiRequest } from '@/lib/api';
+import { apiRequest, getTokens } from '@/lib/api';
+import { toast } from 'sonner';
 import { formatNumber, getRiskColor, getRiskLabel } from '@/lib/utils';
 import { FileText, Download, FileSpreadsheet, FileDown } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
@@ -25,8 +26,62 @@ function ReportsContent() {
       .finally(() => setLoading(false));
   }, []);
 
-  const handleExport = (format: string) => {
-    window.open(`${process.env.NEXT_PUBLIC_API_URL}/reports/export/${format}/`, '_blank');
+  const handleExport = async (format: string) => {
+    const base = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
+    const { access } = getTokens();
+
+    const supported = ['csv', 'xlsx'];
+    try {
+      const res = await fetch(`${base}/reports/export/patients/?fmt=${format}`, {
+        headers: { Authorization: `Bearer ${access}` },
+      });
+      if (!res.ok) throw new Error('Error al exportar');
+      const blob = await res.blob();
+      if (blob.size < 100) {
+        const text = await blob.text();
+        try { const j = JSON.parse(text); throw new Error(j.error || 'Error'); } catch {}
+      }
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      const ext = format === 'xlsx' ? 'xlsx' : format;
+      a.href = url;
+      a.download = `reporte_pacientes_${new Date().toISOString().slice(0, 10)}.${ext}`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success(`Reporte ${format.toUpperCase()} descargado`);
+    } catch {
+      if (!supported.includes(format)) {
+        if (!report) { toast.error('Sin datos para exportar'); return; }
+        const demo = report.demographics;
+        const rows: string[][] = [['Métrica', 'Valor']];
+        rows.push(['Total Pacientes', String(report.summary?.total_patients ?? '')]);
+        rows.push(['Pacientes Críticos', String(report.risk_analysis?.critical ?? '')]);
+        rows.push(['Edad Promedio', String(demo?.avg_age ?? '')]);
+        rows.push(['IMC Promedio', String(demo?.avg_bmi ?? '')]);
+        rows.push(['Glucosa Promedio', String(demo?.avg_glucose ?? '')]);
+        rows.push(['Riesgo Promedio', demo?.avg_risk ? `${demo.avg_risk}%` : '']);
+        rows.push(['Hipertensos', String(demo?.hypertensive ?? '')]);
+        rows.push(['Diabéticos', String(demo?.diabetic ?? '')]);
+        rows.push(['Fumadores', String(demo?.smokers ?? '')]);
+        rows.push(['Calidad ETL', report.summary?.average_quality_score != null ? `${report.summary.average_quality_score}%` : '']);
+        rows.push(['Registros Procesados', String(report.summary?.total_records_processed ?? '')]);
+        if (report.top_diagnoses?.length) {
+          rows.push([], ['Top Diagnósticos', '']);
+          report.top_diagnoses.slice(0, 10).forEach(d => rows.push([d.diagnosis || 'S/D', String(d.count)]));
+        }
+        const csv = rows.map(r => r.join(',')).join('\r\n');
+        const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `reporte_ejecutivo_${new Date().toISOString().slice(0, 10)}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+        toast.success(`Reporte ${format.toUpperCase()} descargado (formato CSV)`);
+        return;
+      }
+      toast.error('Error al descargar ' + format.toUpperCase());
+    }
   };
 
   if (loading) return (

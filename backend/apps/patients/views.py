@@ -71,8 +71,66 @@ class PatientViewSet(viewsets.ModelViewSet):
     def check_object_permissions(self, request, obj):
         super().check_object_permissions(request, obj)
 
+    def check_permissions(self, request):
+        super().check_permissions(request)
+        if self.action in ['create', 'update', 'partial_update']:
+            if not has_module_permission(request.user, 'patients_manage'):
+                self.permission_denied(request, message='No tienes permiso para crear o modificar pacientes')
+
     def perform_create(self, serializer):
         patient = serializer.save()
+
+        if patient.bmi is None and patient.height and patient.weight:
+            height = float(patient.height)
+            weight = float(patient.weight)
+            if height > 0 and weight > 0:
+                patient.bmi = round(weight / (height ** 2), 2)
+
+        if patient.risk_score is None:
+            score = 0
+            if patient.age:
+                if patient.age > 60: score += 10
+                elif patient.age > 45: score += 5
+            if patient.bmi:
+                if patient.bmi >= 40: score += 15
+                elif patient.bmi >= 30: score += 10
+                elif patient.bmi >= 25: score += 5
+            if patient.systolic_bp:
+                if patient.systolic_bp >= 180: score += 20
+                elif patient.systolic_bp >= 160: score += 15
+                elif patient.systolic_bp >= 140: score += 10
+                elif patient.systolic_bp >= 130: score += 5
+            if patient.glucose:
+                g = float(patient.glucose)
+                if g >= 300: score += 20
+                elif g >= 200: score += 15
+                elif g >= 126: score += 10
+                elif g >= 100: score += 5
+            if patient.cholesterol:
+                if float(patient.cholesterol) >= 240: score += 10
+            if patient.heart_rate and patient.heart_rate >= 100: score += 5
+            if patient.smoking: score += 10
+            if patient.family_history: score += 5
+            if not patient.physical_activity: score += 5
+            if patient.alcohol_consumption: score += 5
+
+            patient.risk_score = min(score, 100)
+            if patient.risk_score >= 50: patient.risk_category = 'critical'
+            elif patient.risk_score >= 30: patient.risk_category = 'high'
+            elif patient.risk_score >= 15: patient.risk_category = 'medium'
+            else: patient.risk_category = 'low'
+
+            if patient.bmi:
+                bmi = float(patient.bmi)
+                if bmi < 18.5: patient.bmi_category = 'underweight'
+                elif bmi < 25: patient.bmi_category = 'normal'
+                elif bmi < 30: patient.bmi_category = 'overweight'
+                elif bmi < 35: patient.bmi_category = 'obese_i'
+                elif bmi < 40: patient.bmi_category = 'obese_ii'
+                else: patient.bmi_category = 'obese_iii'
+
+            patient.save()
+
         log_audit(self.request.user, 'create', 'patients', resource_type='patient',
                   resource_id=patient.patient_id,
                   description=f"Paciente creado: {patient.first_name} {patient.last_name}",

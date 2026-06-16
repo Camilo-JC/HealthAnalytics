@@ -70,7 +70,9 @@ class PatientCreateSerializer(serializers.ModelSerializer):
             'triglycerides', 'hemoglobin', 'creatinine',
             'diagnosis', 'diagnosis_code', 'comorbidities',
             'smoking', 'alcohol_consumption', 'physical_activity', 'family_history',
+            'bmi', 'bmi_category', 'risk_category', 'risk_score',
         )
+        read_only_fields = ('bmi', 'bmi_category', 'risk_category', 'risk_score')
 
 
 class PatientBulkUploadSerializer(serializers.Serializer):

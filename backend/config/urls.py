@@ -3,10 +3,21 @@ from django.urls import path, include, re_path
 from django.conf import settings
 from django.conf.urls.static import static
 from django.views.generic import TemplateView
+from django.http import JsonResponse
 from apps.dashboard import views as dashboard_views
 from rest_framework import permissions
 from drf_yasg.views import get_schema_view
 from drf_yasg import openapi
+import datetime
+
+
+def health_check(request):
+    """Health check endpoint for Render/load-balancers."""
+    return JsonResponse({
+        'status': 'ok',
+        'service': 'HealthAnalytics IPS API',
+        'timestamp': datetime.datetime.utcnow().isoformat() + 'Z',
+    })
 
 schema_view = get_schema_view(
     openapi.Info(
@@ -26,6 +37,7 @@ schema_view = get_schema_view(
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('api/health/', health_check, name='health-check'),
     path('api/v1/auth/', include('apps.authentication.urls')),
     path('api/v1/patients/', include('apps.patients.urls')),
     path('api/v1/etl/', include('apps.etl.urls')),

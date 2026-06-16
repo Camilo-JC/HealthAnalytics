@@ -114,9 +114,9 @@ export interface ClinicalAlert {
   alert_type: string;
   severity: string;
   description: string;
-  parameter: string;
-  value: string;
-  threshold: string;
+  parameter?: string;
+  value?: string;
+  threshold?: string;
   is_active: boolean;
   resolved_at: string | null;
   created_at: string;
@@ -225,6 +225,7 @@ export interface ReportData {
     avg_age: number;
     avg_bmi: number;
     avg_glucose: number;
+    avg_risk: number;
     hypertensive: number;
     diabetic: number;
     smokers: number;

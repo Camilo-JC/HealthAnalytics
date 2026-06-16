@@ -147,13 +147,17 @@ MEDIA_ROOT = BASE_DIR / 'media'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # CORS
+_cors_from_env = config('CORS_ALLOWED_ORIGINS', default='')
+_cors_extra = [o.strip() for o in _cors_from_env.split(',') if o.strip()] if _cors_from_env else []
 CORS_ALLOWED_ORIGINS = [
     'http://localhost:8000',
     'http://127.0.0.1:8000',
     'http://localhost:3000',
-]
+    'http://localhost:3001',
+] + _cors_extra
 CORS_ALLOWED_ORIGIN_REGEXES = [
     r'^https://.*\.vercel\.app$',
+    r'^https://.*\.onrender\.com$',
 ]
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_METHODS = ['DELETE', 'GET', 'OPTIONS', 'PATCH', 'POST', 'PUT']
@@ -163,7 +167,12 @@ CORS_ALLOW_HEADERS = [
 ]
 
 # CSRF
-CSRF_TRUSTED_ORIGINS = ['http://localhost:8000', 'http://127.0.0.1:8000']
+CSRF_TRUSTED_ORIGINS = [
+    'http://localhost:8000',
+    'http://127.0.0.1:8000',
+    'https://*.vercel.app',
+    'https://*.onrender.com',
+]
 CSRF_COOKIE_HTTPONLY = False
 CSRF_COOKIE_SAMESITE = 'Lax'
 SESSION_COOKIE_SAMESITE = 'Lax'
@@ -229,6 +238,7 @@ CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = 'America/Bogota'
 CELERY_TASK_TRACK_STARTED = True
 CELERY_TASK_TIME_LIMIT = 30 * 60
+CELERY_TASK_ALWAYS_EAGER = config('CELERY_TASK_ALWAYS_EAGER', default=True, cast=bool)
 CELERY_BEAT_SCHEDULE = {
     'execute-scheduled-etl': {
         'task': 'apps.etl.tasks.execute_scheduled_etl',

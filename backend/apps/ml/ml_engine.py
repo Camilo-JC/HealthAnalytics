@@ -211,7 +211,8 @@ class MLTrainer:
         self.results = results
         results['feature_names'] = feature_names
 
-        best_model_key = max(results, key=lambda k: results[k]['f1_score'])
+        model_keys = ['random_forest', 'logistic_regression', 'decision_tree']
+        best_model_key = max(model_keys, key=lambda k: results[k]['f1_score'])
         results['best_model'] = best_model_key
         results['best_model_name'] = results[best_model_key]['model_name']
 
@@ -235,6 +236,8 @@ class MLTrainer:
     @staticmethod
     def predict_risk(model_obj, input_data):
         model_path = model_obj.file_path
+        if not os.path.exists(model_path):
+            raise FileNotFoundError(f'Archivo de modelo no encontrado: {model_path}')
         with open(model_path, 'rb') as f:
             saved = pickle.load(f)
 
@@ -338,12 +341,39 @@ class MLService:
 
     def predict(self, model_id, input_data):
         from .models import MLModelRegistry
-        try:
-            model_obj = MLModelRegistry.objects.get(id=model_id, is_active=True)
-        except MLModelRegistry.DoesNotExist:
+
+        model_obj = None
+        if model_id:
+            try:
+                model_obj = MLModelRegistry.objects.get(id=model_id)
+            except MLModelRegistry.DoesNotExist:
+                pass
+
+        if not model_obj:
+            model_obj = MLModelRegistry.objects.filter(is_active=True).first()
+
+        if not model_obj:
+            result = self.train_and_register()
+            if not result.get('success'):
+                return {'success': False, 'error': 'No hay modelo activo ni datos suficientes para entrenar'}
             model_obj = MLModelRegistry.objects.filter(is_active=True).first()
             if not model_obj:
-                return {'success': False, 'error': 'No hay modelo activo disponible'}
+                return {'success': False, 'error': 'No se pudo crear un modelo de predicción'}
 
-        result = MLTrainer.predict_risk(model_obj, input_data)
-        return {'success': True, 'model_id': model_obj.id, **result}
+        try:
+            result = MLTrainer.predict_risk(model_obj, input_data)
+            return {'success': True, 'model_id': model_obj.id, **result}
+        except FileNotFoundError:
+            old_path = model_obj.file_path
+            model_obj.is_active = False
+            model_obj.save()
+            new_result = self.train_and_register()
+            if not new_result.get('success'):
+                return {'success': False, 'error': f'Archivo del modelo no encontrado ({old_path}) y no se pudo reentrenar'}
+            model_obj = MLModelRegistry.objects.filter(is_active=True).first()
+            if not model_obj:
+                return {'success': False, 'error': 'Archivo del modelo no encontrado'}
+            result = MLTrainer.predict_risk(model_obj, input_data)
+            return {'success': True, 'model_id': model_obj.id, **result}
+        except Exception as e:
+            return {'success': False, 'error': f'Error en predicción: {str(e)}'}

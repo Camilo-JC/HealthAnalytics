@@ -54,6 +54,35 @@ def dashboard_stats(request):
         .order_by('-count')[:10]
     )
 
+    df = pd.DataFrame(list(patients.values(
+        'age', 'bmi', 'systolic_bp', 'diastolic_bp', 'heart_rate',
+        'glucose', 'cholesterol', 'oxygen_saturation'
+    )))
+
+    advanced_stats = {}
+    if not df.empty:
+        for col in df.columns:
+            series = df[col].dropna()
+            if series.empty:
+                advanced_stats[col] = {'mean': 0, 'median': 0, 'mode': 0, 'std': 0}
+                continue
+            series = pd.to_numeric(series, errors='coerce').dropna()
+            if series.empty:
+                advanced_stats[col] = {'mean': 0, 'median': 0, 'mode': 0, 'std': 0}
+                continue
+            mean_val = float(series.mean())
+            median_val = float(series.median())
+            mode_series = series.mode()
+            mode_val = float(mode_series.iloc[0]) if not mode_series.empty else mean_val
+            std_val = float(series.std()) if len(series) > 1 else 0.0
+
+            advanced_stats[col] = {
+                'mean': round(mean_val, 2),
+                'median': round(median_val, 2),
+                'mode': round(mode_val, 2),
+                'std': round(std_val, 2),
+            }
+
     critical = patients.filter(risk_category='critical').count()
     high_risk = patients.filter(risk_category='high').count()
     hypertensive = patients.filter(systolic_bp__gte=140).count()
@@ -70,6 +99,7 @@ def dashboard_stats(request):
             'bmi_distribution': bmi_dist,
             'age_stats': age_stats,
             'vitals_averages': {k: round(float(v), 2) if v else 0 for k, v in vitals_avg.items()},
+            'advanced_stats': advanced_stats,
             'top_diagnoses': top_diagnoses,
             'critical_patients': critical,
             'high_risk_patients': high_risk,

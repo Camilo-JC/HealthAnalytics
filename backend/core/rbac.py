@@ -42,7 +42,6 @@ ROLE_PERMISSIONS = {
         'etl', 'etl_execute',
         'analytics', 'analytics_export',
         'ml', 'ml_train', 'ml_predict',
-        'reports', 'reports_export',
     ],
     'doctor': [
         'dashboard',
@@ -50,6 +49,8 @@ ROLE_PERMISSIONS = {
         'analytics',
         'reports',
         'settings',
+        'ml',
+        'ml_predict',
     ],
 }
 

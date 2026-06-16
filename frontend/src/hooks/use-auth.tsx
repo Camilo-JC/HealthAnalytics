@@ -65,8 +65,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         'analytics', 'analytics_export', 'ml', 'ml_train', 'ml_predict', 'reports', 'reports_export',
         'users_manage', 'users_delete', 'settings', 'settings_global', 'audit_view'],
       analyst: ['dashboard', 'patients', 'etl', 'etl_execute', 'analytics', 'analytics_export',
-        'ml', 'ml_train', 'ml_predict', 'reports', 'reports_export'],
-      doctor: ['dashboard', 'patients', 'analytics', 'reports'],
+        'ml', 'ml_train', 'ml_predict'],
+      doctor: ['dashboard', 'patients', 'reports'],
     };
     return (perms[user.role] || []).includes(perm);
   }, [user]);
