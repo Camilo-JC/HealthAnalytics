@@ -58,9 +58,19 @@ class MLModelViewSet(viewsets.ReadOnlyModelViewSet):
         serializer = MLPredictSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
+        patient_id = serializer.validated_data.pop('patient_id', None)
+        patient = None
+        if patient_id:
+            from apps.patients.models import Patient
+            try:
+                patient = Patient.objects.get(id=patient_id)
+            except Patient.DoesNotExist:
+                pass
+
         result = ml_service.predict(
             serializer.validated_data.pop('model_id', None),
-            serializer.validated_data
+            serializer.validated_data,
+            patient=patient,
         )
 
         log_audit(request.user, 'predict', 'ml', resource_type='prediction',

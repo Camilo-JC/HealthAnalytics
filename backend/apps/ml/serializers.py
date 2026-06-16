@@ -33,6 +33,7 @@ class MLPredictionSerializer(serializers.ModelSerializer):
 
 class MLPredictSerializer(serializers.Serializer):
     model_id = serializers.IntegerField(required=False)
+    patient_id = serializers.IntegerField(required=False)
     age = serializers.IntegerField(min_value=0, max_value=120)
     bmi = serializers.FloatField(min_value=10, max_value=60)
     glucose = serializers.FloatField(min_value=20, max_value=600)

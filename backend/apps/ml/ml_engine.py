@@ -339,8 +339,8 @@ class MLService:
             },
         }
 
-    def predict(self, model_id, input_data):
-        from .models import MLModelRegistry
+    def predict(self, model_id, input_data, patient=None):
+        from .models import MLModelRegistry, MLPrediction
 
         model_obj = None
         if model_id:
@@ -362,6 +362,18 @@ class MLService:
 
         try:
             result = MLTrainer.predict_risk(model_obj, input_data)
+            try:
+                probabilities = result.get('probabilities', {})
+                MLPrediction.objects.create(
+                    model=model_obj,
+                    patient=patient,
+                    input_data=input_data,
+                    predicted_risk=result.get('predicted_risk', 'unknown'),
+                    predicted_probability=max(probabilities.values()) if probabilities else None,
+                    probabilities=probabilities,
+                )
+            except Exception as save_e:
+                logger.warning(f"No se pudo guardar el registro de predicción: {save_e}")
             return {'success': True, 'model_id': model_obj.id, **result}
         except FileNotFoundError:
             old_path = model_obj.file_path

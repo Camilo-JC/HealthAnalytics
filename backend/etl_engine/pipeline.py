@@ -6,6 +6,7 @@ from .extractor import Extractor
 from .transformer import Transformer
 from .loader import Loader
 from apps.etl.models import DataSource, ETLExecution, ETLLog
+from apps.ml.ml_engine import MLService
 
 logger = logging.getLogger('etl')
 
@@ -69,6 +70,20 @@ class ETLPipeline:
                 )
 
             loaded, failed = self.loader.load(df, execution)
+
+            try:
+                ml_service = MLService()
+                ml_result = ml_service.train_and_register(user)
+                if ml_result.get('success'):
+                    ETLLog.objects.create(
+                        execution=execution,
+                        source=execution.source,
+                        level='info',
+                        phase='ML',
+                        message=f"Modelos ML entrenados: mejor={ml_result.get('best_model')}, accuracy={max(m.get('accuracy',0) for m in ml_result.get('comparison',{}).values()):.2%}"
+                    )
+            except Exception as ml_e:
+                logger.warning(f"Entrenamiento ML automático omitido: {ml_e}")
 
             duration = time.time() - start_time
             if execution:
