@@ -7,15 +7,9 @@
         "maxLambdaSize": "50mb",
         "buildCommand": "python manage.py collectstatic --noinput"
       }
-    },
-    {
-      "src": "staticfiles/**/*",
-      "use": "@vercel/static",
-      "config": {}
     }
   ],
   "routes": [
-    { "src": "/static/(.*)", "dest": "/staticfiles/$1" },
     { "src": "/(.*)", "dest": "api/wsgi.py" }
   ]
 }

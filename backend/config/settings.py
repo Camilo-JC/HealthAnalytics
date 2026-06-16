@@ -140,9 +140,10 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_DIRS = [BASE_DIR / 'static']
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
 
-# Media files
+# Media files (use /tmp/ on Vercel serverless since filesystem is read-only)
 MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media'
+_IS_VERCEL = bool(os.environ.get('VERCEL'))
+MEDIA_ROOT = Path('/tmp/media') if _IS_VERCEL else (BASE_DIR / 'media')
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
