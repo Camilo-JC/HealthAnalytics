@@ -8,24 +8,26 @@ logger = logging.getLogger('etl')
 
 def _read_csv_with_fallback(file_path, encoding=None, sep=None):
     encodings = [encoding] if encoding else ['utf-8', 'latin-1', 'cp1252', 'iso-8859-1']
-    separators = [sep] if sep else [';', ',', '\t', None]
+    separators = [sep] if sep else [';', ',', '\t']
     last_err = None
     for enc in encodings:
         for sep_candidate in separators:
-            kwargs = {'encoding': enc, 'low_memory': False}
-            if sep_candidate is not None:
-                kwargs['sep'] = sep_candidate
             try:
-                return pd.read_csv(file_path, **kwargs)
+                return pd.read_csv(file_path, encoding=enc, sep=sep_candidate, low_memory=False)
             except (UnicodeDecodeError, UnicodeError) as e:
                 last_err = e
                 continue
             except pd.errors.ParserError:
                 continue
             except Exception:
-                if sep_candidate is not None:
-                    continue
-                raise
+                continue
+        try:
+            return pd.read_csv(file_path, encoding=enc, engine='python')
+        except (UnicodeDecodeError, UnicodeError) as e:
+            last_err = e
+            continue
+        except Exception:
+            continue
     raise last_err or Exception("No se pudo leer el archivo CSV con ninguna codificación")
 
 
