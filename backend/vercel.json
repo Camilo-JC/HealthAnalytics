@@ -1,0 +1,15 @@
+{
+  "builds": [
+    {
+      "src": "api/wsgi.py",
+      "use": "@vercel/python",
+      "config": {
+        "maxLambdaSize": "50mb",
+        "buildCommand": "python manage.py collectstatic --noinput"
+      }
+    }
+  ],
+  "routes": [
+    { "src": "/(.*)", "dest": "api/wsgi.py" }
+  ]
+}

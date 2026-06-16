@@ -7,7 +7,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = config('DJANGO_SECRET_KEY', default='dev-secret-key-change-in-production-!@#$%')
 DEBUG = config('DJANGO_DEBUG', default=True, cast=bool)
-ALLOWED_HOSTS = config('DJANGO_ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=Csv())
+ALLOWED_HOSTS = config('DJANGO_ALLOWED_HOSTS', default='localhost,127.0.0.1,.vercel.app', cast=Csv())
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -92,7 +92,7 @@ if database_url:
             'HOST': parsed.hostname,
             'PORT': parsed.port or '5432',
             'ATOMIC_REQUESTS': True,
-            'CONN_MAX_AGE': 60,
+            'CONN_MAX_AGE': config('DB_CONN_MAX_AGE', default=0, cast=int),
             'OPTIONS': {'sslmode': sslmode},
         }
     }
@@ -114,7 +114,7 @@ else:
             'HOST': config('DB_HOST', default='localhost'),
             'PORT': config('DB_PORT', default='5432'),
             'ATOMIC_REQUESTS': True,
-            'CONN_MAX_AGE': 60,
+            'CONN_MAX_AGE': config('DB_CONN_MAX_AGE', default=0, cast=int),
         }
     }
 

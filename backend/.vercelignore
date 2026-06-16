@@ -1,0 +1,7 @@
+db.sqlite3
+*.pyc
+logs/
+media/avatars/
+/media/uploads/
+__pycache__/
+.git
