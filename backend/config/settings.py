@@ -5,6 +5,10 @@ from decouple import config, Csv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# Ensure required directories exist
+(BASE_DIR / 'logs').mkdir(exist_ok=True)
+(BASE_DIR / 'staticfiles').mkdir(exist_ok=True)
+
 SECRET_KEY = config('DJANGO_SECRET_KEY', default='dev-secret-key-change-in-production-!@#$%')
 DEBUG = config('DJANGO_DEBUG', default=True, cast=bool)
 ALLOWED_HOSTS = config('DJANGO_ALLOWED_HOSTS', default='localhost,127.0.0.1,.vercel.app', cast=Csv())
