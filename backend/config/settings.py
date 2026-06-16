@@ -351,7 +351,9 @@ ETL_DEFAULT_ENCODING = config('ETL_DEFAULT_ENCODING', default='utf-8')
 ML_RANDOM_STATE = config('ML_RANDOM_STATE', default=42, cast=int)
 ML_TEST_SIZE = config('ML_TEST_SIZE', default=0.2, cast=float)
 ML_CV_FOLDS = config('ML_CV_FOLDS', default=5, cast=int)
-ML_MODEL_PATH = BASE_DIR / config('ML_MODEL_PATH', default='models/')
+ML_MODEL_PATH = Path(config('ML_MODEL_PATH', default='/tmp/models' if os.environ.get('VERCEL') else str(BASE_DIR / 'models/')))
+if not ML_MODEL_PATH.exists():
+    ML_MODEL_PATH.mkdir(parents=True, exist_ok=True)
 
 # Email
 EMAIL_BACKEND = config('EMAIL_BACKEND', default='django.core.mail.backends.console.EmailBackend')
