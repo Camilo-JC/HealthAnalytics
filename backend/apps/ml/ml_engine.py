@@ -59,87 +59,63 @@ class MLTrainer:
         logger.info("Entrenando Random Forest...")
         start = time.time()
 
-        param_grid = {
-            'n_estimators': [100, 200, 300],
-            'max_depth': [10, 20, 30, None],
-            'min_samples_split': [2, 5, 10],
-            'min_samples_leaf': [1, 2, 4],
-        }
-
-        rf = RandomForestClassifier(random_state=settings.ML_RANDOM_STATE, class_weight='balanced')
-
-        grid = GridSearchCV(
-            rf, param_grid, cv=settings.ML_CV_FOLDS,
-            scoring='f1_weighted', n_jobs=-1, verbose=0
+        rf = RandomForestClassifier(
+            n_estimators=200, max_depth=20,
+            random_state=settings.ML_RANDOM_STATE, class_weight='balanced',
+            n_jobs=1
         )
-        grid.fit(X_train, y_train)
+        rf.fit(X_train, y_train)
 
         duration = time.time() - start
-        logger.info(f"Random Forest entrenado en {duration:.2f}s - Mejores params: {grid.best_params_}")
+        logger.info(f"Random Forest entrenado en {duration:.2f}s")
 
         cv_scores = cross_val_score(
-            grid.best_estimator_, X_train, y_train,
-            cv=settings.ML_CV_FOLDS, scoring='f1_weighted'
+            rf, X_train, y_train,
+            cv=3, scoring='f1_weighted'
         )
 
-        return grid.best_estimator_, grid.best_params_, cv_scores, duration
+        return rf, {}, cv_scores, duration
 
     def train_logistic_regression(self, X_train, y_train):
         logger.info("Entrenando Regresión Logística...")
         start = time.time()
 
-        param_grid = {
-            'C': [0.01, 0.1, 1, 10, 100],
-            'solver': ['lbfgs', 'newton-cg', 'saga'],
-            'max_iter': [1000, 2000],
-        }
-
-        lr = LogisticRegression(random_state=settings.ML_RANDOM_STATE, class_weight='balanced')
-
-        grid = GridSearchCV(
-            lr, param_grid, cv=settings.ML_CV_FOLDS,
-            scoring='f1_weighted', n_jobs=-1, verbose=0
+        lr = LogisticRegression(
+            C=1.0, solver='lbfgs', max_iter=1000,
+            random_state=settings.ML_RANDOM_STATE, class_weight='balanced'
         )
-        grid.fit(X_train, y_train)
+        lr.fit(X_train, y_train)
 
         duration = time.time() - start
         logger.info(f"Regresión Logística entrenada en {duration:.2f}s")
 
         cv_scores = cross_val_score(
-            grid.best_estimator_, X_train, y_train,
-            cv=settings.ML_CV_FOLDS, scoring='f1_weighted'
+            lr, X_train, y_train,
+            cv=3, scoring='f1_weighted'
         )
 
-        return grid.best_estimator_, grid.best_params_, cv_scores, duration
+        return lr, {}, cv_scores, duration
 
     def train_decision_tree(self, X_train, y_train):
         logger.info("Entrenando Árbol de Decisión...")
         start = time.time()
 
-        param_grid = {
-            'max_depth': [5, 10, 15, 20, 30, None],
-            'min_samples_split': [2, 5, 10, 20],
-            'min_samples_leaf': [1, 2, 5, 10],
-            'criterion': ['gini', 'entropy'],
-        }
-
-        dt = DecisionTreeClassifier(random_state=settings.ML_RANDOM_STATE, class_weight='balanced')
-
-        grid = GridSearchCV(
-            dt, param_grid, cv=settings.ML_CV_FOLDS,
-            scoring='f1_weighted', n_jobs=-1, verbose=0
+        dt = DecisionTreeClassifier(
+            max_depth=15, min_samples_split=5, min_samples_leaf=2,
+            criterion='gini', random_state=settings.ML_RANDOM_STATE,
+            class_weight='balanced'
         )
-        grid.fit(X_train, y_train)
+        dt.fit(X_train, y_train)
 
         duration = time.time() - start
         logger.info(f"Árbol de Decisión entrenado en {duration:.2f}s")
 
         cv_scores = cross_val_score(
-            grid.best_estimator_, X_train, y_train,
-            cv=settings.ML_CV_FOLDS, scoring='f1_weighted'
+            dt, X_train, y_train,
+            cv=3, scoring='f1_weighted'
         )
 
-        return grid.best_estimator_, grid.best_params_, cv_scores, duration
+        return dt, {}, cv_scores, duration
 
     def evaluate(self, model, X_test, y_test, feature_names=None):
         y_pred = model.predict(X_test)
