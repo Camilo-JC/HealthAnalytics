@@ -7,20 +7,42 @@ logger = logging.getLogger('etl')
 
 
 class Extractor(BaseETLComponent):
-    def extract(self, file_path, source_type='excel', encoding='utf-8'):
+    def extract(self, file_path, source_type='excel', encoding=None):
         self.log('info', f"Iniciando extracción: {file_path}", 'EXTRACT')
         ext = os.path.splitext(file_path)[1].lower()
         try:
             if ext in ['.xlsx', '.xls'] or source_type == 'excel':
                 df = pd.read_excel(file_path, engine='openpyxl' if ext == '.xlsx' else 'xlrd')
             elif ext == '.csv' or source_type == 'csv':
-                df = pd.read_csv(file_path, encoding=encoding, low_memory=False)
+                encodings = [encoding] if encoding else ['utf-8', 'latin-1', 'cp1252', 'iso-8859-1']
+                df = None
+                last_err = None
+                for enc in encodings:
+                    try:
+                        df = pd.read_csv(file_path, encoding=enc, low_memory=False, sep=None, engine='python')
+                        break
+                    except (UnicodeDecodeError, UnicodeError) as e:
+                        last_err = e
+                        continue
+                if df is None:
+                    raise last_err or Exception("No se pudo leer el archivo CSV con ninguna codificación")
             elif ext == '.json':
                 df = pd.read_json(file_path)
             elif ext == '.parquet':
                 df = pd.read_parquet(file_path)
             else:
-                df = pd.read_csv(file_path, encoding=encoding, low_memory=False)
+                encodings = [encoding] if encoding else ['utf-8', 'latin-1', 'cp1252', 'iso-8859-1']
+                df = None
+                last_err = None
+                for enc in encodings:
+                    try:
+                        df = pd.read_csv(file_path, encoding=enc, low_memory=False, sep=None, engine='python')
+                        break
+                    except (UnicodeDecodeError, UnicodeError) as e:
+                        last_err = e
+                        continue
+                if df is None:
+                    raise last_err or Exception("No se pudo leer el archivo con ninguna codificación")
 
             self.log('info', f"Extraídas {len(df)} filas, {len(df.columns)} columnas", 'EXTRACT')
             return df
