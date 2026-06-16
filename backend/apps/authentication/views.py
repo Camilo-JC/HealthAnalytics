@@ -141,32 +141,6 @@ class CustomTokenObtainPairView(TokenObtainPairView):
         return response
 
 
-class SeedUsersView(APIView):
-    permission_classes = [permissions.AllowAny]
-
-    def post(self, request):
-        users_data = [
-            ('admin@gmail.com', 'Health123', 'Administrador', 'admin'),
-            ('doctor@gmail.com', 'Health123', 'Dr. Carlos Mendoza', 'doctor'),
-            ('analista@gmail.com', 'Health123', 'Ana López García', 'analyst'),
-        ]
-        results = []
-        for email, password, full_name, role in users_data:
-            user, created = User.objects.get_or_create(
-                email=email,
-                defaults={'full_name': full_name, 'role': role}
-            )
-            user.set_password(password)
-            user.full_name = full_name
-            user.role = role
-            if role == 'admin':
-                user.is_staff = True
-                user.is_superuser = True
-            user.save()
-            results.append({'email': email, 'role': role, 'created': created})
-        return Response({'success': True, 'users': results})
-
-
 class CustomTokenRefreshView(TokenRefreshView):
     def post(self, request, *args, **kwargs):
         response = super().post(request, *args, **kwargs)
