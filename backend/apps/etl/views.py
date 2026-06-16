@@ -75,23 +75,25 @@ class DataSourceViewSet(viewsets.ModelViewSet):
                 {'success': False, 'error': 'No tienes permiso para cargar archivos ETL'},
                 status=status.HTTP_403_FORBIDDEN
             )
-        file = request.FILES.get('file')
-        if not file:
+        f = request.FILES.get('file')
+        if not f:
             return Response(
                 {'success': False, 'error': 'No se proporcionó archivo'},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        name = request.POST.get('name', file.name)
+        name = request.POST.get('name', f.name)
         source_type = request.POST.get('source_type', 'excel')
         source = DataSource.objects.create(
             name=name,
             source_type=source_type,
-            file=file,
-            original_filename=file.name,
-            file_size=file.size,
+            file=f,
+            original_filename=f.name,
+            file_size=f.size,
+            file_content=f.read(),
+            file_content_name=f.name,
         )
         log_audit(request.user, 'create', 'etl', resource_type='datasource',
-                  resource_id=source.id, description=f"Fuente creada con archivo: {file.name}",
+                  resource_id=source.id, description=f"Fuente creada con archivo: {f.name}",
                   request=request)
         return Response({'success': True, 'message': 'Archivo cargado exitosamente', 'id': source.id})
 
@@ -175,14 +177,25 @@ class ETLExecutionViewSet(viewsets.ModelViewSet):
                 'task_id': task.id
             })
         else:
+            import tempfile, os
+            ext = os.path.splitext(source.file_content_name or source.original_filename or 'file.xlsx')[1]
+            with tempfile.NamedTemporaryFile(delete=False, suffix=ext) as tmp:
+                tmp.write(source.file_content or b'')
+                tmp_path = tmp.name
             from etl_engine.pipeline import ETLPipeline
             pipeline = ETLPipeline(execution_id=execution.id)
-            result = pipeline.run(
-                source.file.path,
-                source.source_type,
-                user=request.user,
-                source_name=source.name
-            )
+            try:
+                result = pipeline.run(
+                    tmp_path,
+                    source.source_type,
+                    user=request.user,
+                    source_name=source.name
+                )
+            finally:
+                try:
+                    os.unlink(tmp_path)
+                except Exception:
+                    pass
             return Response({'success': result['success'], 'data': result})
 
     @action(detail=False, methods=['get'])

@@ -19,6 +19,8 @@ class DataSource(models.Model):
     name = models.CharField(_('nombre'), max_length=255)
     source_type = models.CharField(_('tipo'), max_length=20, choices=SourceType.choices)
     file = models.FileField(_('archivo'), upload_to='uploads/', null=True, blank=True)
+    file_content = models.BinaryField(_('contenido'), null=True, blank=True, editable=False)
+    file_content_name = models.CharField(_('nombre archivo'), max_length=255, blank=True)
     original_filename = models.CharField(_('nombre original'), max_length=255, blank=True)
     file_size = models.BigIntegerField(_('tamaño (bytes)'), null=True, blank=True)
     row_count = models.IntegerField(_('filas'), null=True, blank=True)
