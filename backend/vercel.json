@@ -5,7 +5,7 @@
       "use": "@vercel/python",
       "config": {
         "maxLambdaSize": "50mb",
-        "buildCommand": "python manage.py collectstatic --noinput"
+        "buildCommand": "python manage.py migrate --noinput && python manage.py collectstatic --noinput"
       }
     }
   ],
