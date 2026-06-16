@@ -5,10 +5,6 @@ from decouple import config, Csv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Ensure required directories exist
-(BASE_DIR / 'logs').mkdir(exist_ok=True)
-(BASE_DIR / 'staticfiles').mkdir(exist_ok=True)
-
 SECRET_KEY = config('DJANGO_SECRET_KEY', default='dev-secret-key-change-in-production-!@#$%')
 DEBUG = config('DJANGO_DEBUG', default=True, cast=bool)
 ALLOWED_HOSTS = config('DJANGO_ALLOWED_HOSTS', default='localhost,127.0.0.1,.vercel.app', cast=Csv())
@@ -258,7 +254,15 @@ CELERY_BEAT_SCHEDULE = {
     },
 }
 
-# Logging
+# Logging — solo archivo si el filesystem es escribible (serverless-friendly)
+_use_file_logging = False
+_logs_dir = BASE_DIR / 'logs'
+try:
+    _logs_dir.mkdir(exist_ok=True)
+    _use_file_logging = True
+except OSError:
+    pass
+
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -277,39 +281,44 @@ LOGGING = {
             'class': 'logging.StreamHandler',
             'formatter': 'verbose',
         },
-        'file': {
-            'class': 'logging.handlers.RotatingFileHandler',
-            'filename': BASE_DIR / 'logs' / 'healthcare_etl.log',
-            'maxBytes': 10485760,
-            'backupCount': 10,
-            'formatter': 'verbose',
-        },
-        'etl_file': {
-            'class': 'logging.handlers.RotatingFileHandler',
-            'filename': BASE_DIR / 'logs' / 'etl.log',
-            'maxBytes': 10485760,
-            'backupCount': 10,
-            'formatter': 'verbose',
-        },
     },
     'loggers': {
         'django': {
-            'handlers': ['console', 'file'],
+            'handlers': ['console'],
             'level': config('LOG_LEVEL', default='INFO'),
             'propagate': True,
         },
         'etl': {
-            'handlers': ['console', 'etl_file'],
+            'handlers': ['console'],
             'level': 'DEBUG',
             'propagate': False,
         },
         'ml': {
-            'handlers': ['console', 'file'],
+            'handlers': ['console'],
             'level': 'INFO',
             'propagate': False,
         },
     },
 }
+
+if _use_file_logging:
+    LOGGING['handlers']['file'] = {
+        'class': 'logging.handlers.RotatingFileHandler',
+        'filename': _logs_dir / 'healthcare_etl.log',
+        'maxBytes': 10485760,
+        'backupCount': 10,
+        'formatter': 'verbose',
+    }
+    LOGGING['handlers']['etl_file'] = {
+        'class': 'logging.handlers.RotatingFileHandler',
+        'filename': _logs_dir / 'etl.log',
+        'maxBytes': 10485760,
+        'backupCount': 10,
+        'formatter': 'verbose',
+    }
+    LOGGING['loggers']['django']['handlers'].append('file')
+    LOGGING['loggers']['etl']['handlers'].append('etl_file')
+    LOGGING['loggers']['ml']['handlers'].append('file')
 
 # Import/Export
 IMPORT_EXPORT_USE_TRANSACTIONS = True
