@@ -65,5 +65,5 @@ urlpatterns = [
 
 urlpatterns += [
     re_path(r'^%s(?P<path>.*)$' % settings.MEDIA_URL.lstrip('/'), serve, {'document_root': settings.MEDIA_ROOT}),
-    re_path(r'^%s(?P<path>.*)$' % settings.STATIC_URL.lstrip('/'), staticfiles_serve),
+    re_path(r'^%s(?P<path>.*)$' % settings.STATIC_URL.lstrip('/'), staticfiles_serve, {'insecure': True}),
 ]
