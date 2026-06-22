@@ -77,6 +77,74 @@ class PatientViewSet(viewsets.ModelViewSet):
             if not has_module_permission(request.user, 'patients_manage'):
                 self.permission_denied(request, message='No tienes permiso para crear o modificar pacientes')
 
+    def _detect_conditions(self, patient):
+        conditions = {}
+        if patient.systolic_bp:
+            sbp = float(patient.systolic_bp)
+            dbp = float(patient.diastolic_bp) if patient.diastolic_bp else 0
+            if sbp >= 140 or dbp >= 90:
+                conditions['Hypertension'] = 'I10'
+            elif sbp >= 130 or dbp >= 80:
+                conditions['Hypertension'] = 'I10'
+        if patient.glucose:
+            glu = float(patient.glucose)
+            if glu >= 200:
+                conditions['Diabetes Mellitus'] = 'E11'
+            elif glu >= 126:
+                conditions['Diabetes Mellitus'] = 'E11'
+        if patient.bmi:
+            bmi = float(patient.bmi)
+            if bmi >= 40:
+                conditions['Morbid Obesity'] = 'E66.0'
+            elif bmi >= 30:
+                conditions['Obesity'] = 'E66'
+        if patient.cholesterol:
+            col = float(patient.cholesterol)
+            if col >= 240:
+                conditions['Hypercholesterolemia'] = ''
+        return conditions
+
+    def _has_condition_variant(self, diag_text, condition_name):
+        d = str(diag_text).lower()
+        variants = {
+            'hypertension': ['hipertension', 'hipertensión', 'hipertensíon', 'hipertencion', 'hta', 'presion alta'],
+            'diabetes mellitus': ['diabetes', 'dm', 'dm2'],
+            'obesity': ['obesidad', 'obeso', 'obesa'],
+            'morbid obesity': ['obesidad morbida', 'obesidad mórbida', 'obesidad grado iii', 'obesidad iii'],
+            'hypercholesterolemia': ['colesterol', 'hipercolesterolemia', 'colesterol alto'],
+        }
+        name_lower = condition_name.lower()
+        if name_lower in variants:
+            for v in variants[name_lower]:
+                if v in d:
+                    return True
+        return name_lower in d
+
+    def _assign_clinical_diagnosis(self, patient):
+        diag = patient.diagnosis or ''
+        code = patient.diagnosis_code or ''
+        conditions = self._detect_conditions(patient)
+        if not conditions:
+            if not diag.strip() or diag.strip().lower() in ('sano', 'sana', 'saludable', 'healthy', 'ninguno', 'ninguna', 'none', 'sin diagnostico', 'sin diagnóstico', 'normal', 'bueno', 'buena', 'excelente'):
+                patient.diagnosis = 'Sano'
+                patient.diagnosis_code = ''
+            return
+
+        is_healthy = not diag.strip() or any(k in diag.strip().lower() for k in ['sano', 'sana', 'saludable', 'healthy', 'ninguno', 'ninguna', 'none', 'sin diagnostico', 'sin diagnóstico', 'normal', 'bueno', 'buena', 'excelente'])
+        missing = {k: v for k, v in conditions.items() if not self._has_condition_variant(diag, k)}
+
+        if not missing:
+            return
+
+        if is_healthy:
+            patient.diagnosis = ', '.join(missing.keys())
+            patient.diagnosis_code = ', '.join(v for v in missing.values() if v)
+        else:
+            existing_codes = set(code.split(', ')) if code else set()
+            new_codes = [v for v in missing.values() if v and v not in existing_codes]
+            patient.diagnosis = diag + ', ' + ', '.join(missing.keys())
+            patient.diagnosis_code = (code + ', ' + ', '.join(new_codes)) if new_codes else code
+
     def perform_create(self, serializer):
         patient = serializer.save()
 
@@ -85,6 +153,8 @@ class PatientViewSet(viewsets.ModelViewSet):
             weight = float(patient.weight)
             if height > 0 and weight > 0:
                 patient.bmi = round(weight / (height ** 2), 2)
+
+        self._assign_clinical_diagnosis(patient)
 
         if patient.risk_score is None:
             score = 0
@@ -140,7 +210,8 @@ class PatientViewSet(viewsets.ModelViewSet):
                 elif bmi < 40: patient.bmi_category = 'obese_ii'
                 else: patient.bmi_category = 'obese_iii'
 
-            patient.save()
+
+        patient.save()
 
         log_audit(self.request.user, 'create', 'patients', resource_type='patient',
                   resource_id=patient.patient_id,
@@ -150,6 +221,8 @@ class PatientViewSet(viewsets.ModelViewSet):
     def perform_update(self, serializer):
         old = Patient.objects.get(pk=serializer.instance.pk)
         patient = serializer.save()
+        self._assign_clinical_diagnosis(patient)
+        patient.save(update_fields=['diagnosis', 'diagnosis_code'])
         changes = []
         for field in ['risk_category', 'diagnosis', 'diagnosis_code']:
             if getattr(old, field) != getattr(patient, field):
