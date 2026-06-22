@@ -44,7 +44,7 @@ class PatientViewSet(viewsets.ModelViewSet):
         'document_number', 'diagnosis', 'diagnosis_code'
     ]
     ordering_fields = '__all__'
-    ordering = ['patient_id']
+    ordering = ['id']
 
     def get_serializer_class(self):
         if self.action == 'create':
@@ -142,8 +142,9 @@ class PatientViewSet(viewsets.ModelViewSet):
         else:
             existing_codes = set(code.split(', ')) if code else set()
             new_codes = [v for v in missing.values() if v and v not in existing_codes]
+            sep = ', ' if code else ''
             patient.diagnosis = diag + ', ' + ', '.join(missing.keys())
-            patient.diagnosis_code = (code + ', ' + ', '.join(new_codes)) if new_codes else code
+            patient.diagnosis_code = (code + sep + ', '.join(new_codes)) if new_codes else code
 
     def perform_create(self, serializer):
         patient = serializer.save()

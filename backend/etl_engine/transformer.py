@@ -601,9 +601,13 @@ class Transformer(BaseETLComponent):
                 result_code = ', '.join(v for v in missing.values() if v)
             else:
                 result_diag = diag_text + ', ' + ', '.join(missing.keys())
-                existing_codes = set(str(code).split(', ')) if pd.notna(code) else set()
+                existing_codes = set(c for c in str(code).split(', ') if c) if pd.notna(code) else set()
                 new_codes = [v for v in missing.values() if v and v not in existing_codes]
-                result_code = (str(code) + ', ' + ', '.join(new_codes)) if new_codes else code
+                if new_codes:
+                    sep = ', ' if str(code).strip() else ''
+                    result_code = str(code) + sep + ', '.join(new_codes)
+                else:
+                    result_code = code
 
             return result_diag, result_code
 

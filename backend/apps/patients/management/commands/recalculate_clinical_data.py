@@ -32,6 +32,7 @@ class Command(BaseCommand):
             })
 
         df = pd.DataFrame(rows)
+        df = t._normalize_diagnosis(df)
         df = t._assign_clinical_diagnosis(df)
         df = t._calculate_risk(df)
 

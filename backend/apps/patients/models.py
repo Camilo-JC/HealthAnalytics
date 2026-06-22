@@ -77,7 +77,7 @@ class Patient(models.Model):
     class Meta:
         verbose_name = _('paciente')
         verbose_name_plural = _('pacientes')
-        ordering = ['patient_id']
+        ordering = ['id']
         indexes = [
             models.Index(fields=['patient_id', 'document_number']),
             models.Index(fields=['risk_category']),
