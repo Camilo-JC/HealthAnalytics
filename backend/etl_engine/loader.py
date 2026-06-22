@@ -49,9 +49,9 @@ class Loader(BaseETLComponent):
     def _prepare_patient_data(self, row):
         fields = [
             'patient_id', 'first_name', 'last_name', 'document_type', 'document_number',
-            'age', 'gender', 'blood_type', 'height', 'weight', 'bmi', 'bmi_category',
+            'age', 'gender', 'height', 'weight', 'bmi', 'bmi_category',
             'systolic_bp', 'diastolic_bp', 'heart_rate', 'oxygen_saturation',
-            'glucose', 'cholesterol', 'cholesterol_ldl', 'cholesterol_hdl',
+            'glucose', 'cholesterol',
             'triglycerides', 'hemoglobin', 'creatinine',
             'diagnosis', 'diagnosis_code', 'comorbidities',
             'smoking', 'alcohol_consumption', 'physical_activity', 'family_history',
@@ -83,8 +83,8 @@ class Loader(BaseETLComponent):
             if num_field in data and data[num_field] is not None:
                 data[num_field] = int(float(data[num_field]))
 
-        for dec_field in ['height', 'weight', 'bmi', 'glucose', 'cholesterol', 'cholesterol_ldl',
-                          'cholesterol_hdl', 'triglycerides', 'hemoglobin', 'creatinine', 'risk_score']:
+        for dec_field in ['height', 'weight', 'bmi', 'glucose', 'cholesterol',
+                          'triglycerides', 'hemoglobin', 'creatinine', 'risk_score']:
             if dec_field in data and data[dec_field] is not None:
                 data[dec_field] = round(float(data[dec_field]), 2)
 

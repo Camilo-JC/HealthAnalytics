@@ -21,17 +21,6 @@ const GENDER_OPTIONS = [
   { value: 'O', label: 'Otro' },
 ];
 
-const BLOOD_TYPE_OPTIONS = [
-  { value: 'A+', label: 'A+' },
-  { value: 'A-', label: 'A-' },
-  { value: 'B+', label: 'B+' },
-  { value: 'B-', label: 'B-' },
-  { value: 'AB+', label: 'AB+' },
-  { value: 'AB-', label: 'AB-' },
-  { value: 'O+', label: 'O+' },
-  { value: 'O-', label: 'O-' },
-];
-
 const DOCUMENT_TYPE_OPTIONS = [
   { value: 'CC', label: 'Cédula de Ciudadanía' },
   { value: 'CE', label: 'Cédula de Extranjería' },
@@ -47,7 +36,6 @@ const initialFormState = {
   document_number: '',
   age: 30,
   gender: '',
-  blood_type: '',
   height: 1.70,
   weight: 70,
   systolic_bp: 120,
@@ -56,8 +44,6 @@ const initialFormState = {
   oxygen_saturation: 98,
   glucose: 90,
   cholesterol: 180,
-  cholesterol_ldl: '',
-  cholesterol_hdl: '',
   triglycerides: '',
   hemoglobin: '',
   creatinine: '',
@@ -167,13 +153,10 @@ function PatientsContent() {
         oxygen_saturation: form.oxygen_saturation ? Number(form.oxygen_saturation) : undefined,
         glucose: Number(form.glucose),
         cholesterol: Number(form.cholesterol),
-        cholesterol_ldl: form.cholesterol_ldl !== '' ? Number(form.cholesterol_ldl) : undefined,
-        cholesterol_hdl: form.cholesterol_hdl !== '' ? Number(form.cholesterol_hdl) : undefined,
         triglycerides: form.triglycerides !== '' ? Number(form.triglycerides) : undefined,
         hemoglobin: form.hemoglobin !== '' ? Number(form.hemoglobin) : undefined,
         creatinine: form.creatinine !== '' ? Number(form.creatinine) : undefined,
         age: Number(form.age),
-        blood_type: form.blood_type || undefined,
       };
       await apiRequest('/patients/', {
         method: 'POST',
@@ -387,11 +370,6 @@ function PatientsContent() {
                     <Select options={GENDER_OPTIONS} placeholder="Seleccione..." value={form.gender}
                       onChange={e => updateField('gender', e.target.value)} required />
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-sm font-medium">Tipo Sanguíneo</label>
-                    <Select options={BLOOD_TYPE_OPTIONS} placeholder="—" value={form.blood_type}
-                      onChange={e => updateField('blood_type', e.target.value)} />
-                  </div>
                 </div>
               </div>
 
@@ -440,19 +418,9 @@ function PatientsContent() {
                       onChange={e => updateField('glucose', e.target.value)} required />
                   </div>
                   <div className="space-y-1">
-                    <label className="text-sm font-medium">Colesterol Total *</label>
-                    <Input type="number" step="0.1" min={50} max={500} value={form.cholesterol}
+                    <label className="text-sm font-medium">Colesterol Total</label>
+                    <Input type="number" step="0.1" min={0} max={500} value={form.cholesterol}
                       onChange={e => updateField('cholesterol', e.target.value)} required />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-sm font-medium">Colesterol LDL</label>
-                    <Input type="number" step="0.1" value={form.cholesterol_ldl}
-                      onChange={e => updateField('cholesterol_ldl', e.target.value)} />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-sm font-medium">Colesterol HDL</label>
-                    <Input type="number" step="0.1" value={form.cholesterol_hdl}
-                      onChange={e => updateField('cholesterol_hdl', e.target.value)} />
                   </div>
                   <div className="space-y-1">
                     <label className="text-sm font-medium">Triglicéridos</label>

@@ -92,14 +92,15 @@ class PatientViewSet(viewsets.ModelViewSet):
                 if patient.age > 60: score += 10
                 elif patient.age > 45: score += 5
             if patient.bmi:
-                if patient.bmi >= 40: score += 15
-                elif patient.bmi >= 30: score += 10
-                elif patient.bmi >= 25: score += 5
+                if float(patient.bmi) >= 40: score += 15
+                elif float(patient.bmi) >= 35: score += 10
+                elif float(patient.bmi) >= 30: score += 5
+                elif float(patient.bmi) >= 25: score += 2
             if patient.systolic_bp:
                 if patient.systolic_bp >= 180: score += 20
-                elif patient.systolic_bp >= 160: score += 15
-                elif patient.systolic_bp >= 140: score += 10
-                elif patient.systolic_bp >= 130: score += 5
+                elif patient.systolic_bp >= 140: score += 15
+                elif patient.systolic_bp >= 130: score += 10
+                elif patient.systolic_bp >= 120: score += 5
             if patient.glucose:
                 g = float(patient.glucose)
                 if g >= 300: score += 20
@@ -107,12 +108,22 @@ class PatientViewSet(viewsets.ModelViewSet):
                 elif g >= 126: score += 10
                 elif g >= 100: score += 5
             if patient.cholesterol:
-                if float(patient.cholesterol) >= 240: score += 10
-            if patient.heart_rate and patient.heart_rate >= 100: score += 5
+                c = float(patient.cholesterol)
+                if c >= 300: score += 15
+                elif c >= 240: score += 10
+                elif c >= 200: score += 5
+            if patient.oxygen_saturation:
+                if patient.oxygen_saturation < 85: score += 20
+                elif patient.oxygen_saturation <= 90: score += 10
+                elif patient.oxygen_saturation <= 95: score += 3
+            if patient.heart_rate:
+                if patient.heart_rate > 150 or patient.heart_rate < 40: score += 15
+                elif patient.heart_rate > 100: score += 5
+                elif patient.heart_rate < 60: score += 3
             if patient.smoking: score += 10
             if patient.family_history: score += 5
             if not patient.physical_activity: score += 5
-            if patient.alcohol_consumption: score += 5
+            if patient.alcohol_consumption: score += 3
 
             patient.risk_score = min(score, 100)
             if patient.risk_score >= 50: patient.risk_category = 'critical'

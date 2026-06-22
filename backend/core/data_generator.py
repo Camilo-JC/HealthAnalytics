@@ -132,9 +132,6 @@ def generate_clinical_dataset(n_records=1850):
             cholesterol = np.random.normal(185, 25)
         cholesterol = round(max(80, min(400, cholesterol)), 1)
 
-        ldl = round(cholesterol * np.random.uniform(0.5, 0.7), 1)
-        hdl = round(np.random.normal(45 if gender == 'M' else 52, 8), 1)
-        hdl = max(15, min(100, hdl))
         triglycerides = round(np.random.normal(150, 50), 1)
         triglycerides = max(40, min(800, triglycerides))
         hemoglobin = round(np.random.normal(15 if gender == 'M' else 13.5, 1.2), 1)
@@ -146,9 +143,6 @@ def generate_clinical_dataset(n_records=1850):
         alcohol = np.random.choice([True, False], p=[0.35, 0.65])
         physical_activity = np.random.choice([True, False], p=[0.40, 0.60])
         family_history = np.random.choice([True, False], p=[0.25, 0.75])
-
-        blood_type = np.random.choice(['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'],
-                                      p=[0.30, 0.06, 0.09, 0.02, 0.04, 0.01, 0.40, 0.08])
 
         diag_list = []
         if diagnosis == 'Hypertension':
@@ -201,7 +195,6 @@ def generate_clinical_dataset(n_records=1850):
             'document_number': document,
             'age': age,
             'gender': gender,
-            'blood_type': blood_type,
             'height': height,
             'weight': weight,
             'bmi': bmi,
@@ -212,8 +205,6 @@ def generate_clinical_dataset(n_records=1850):
             'oxygen_saturation': spo2,
             'glucose': glucose,
             'cholesterol': cholesterol,
-            'cholesterol_ldl': ldl,
-            'cholesterol_hdl': hdl,
             'triglycerides': triglycerides,
             'hemoglobin': hemoglobin,
             'creatinine': creatinine,

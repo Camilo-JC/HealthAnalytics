@@ -1,32 +1,115 @@
 CLINICAL_RANGES = {
     'age': {'min': 0, 'max': 120},
-    'height': {'min': 0.50, 'max': 2.50},
-    'weight': {'min': 20.0, 'max': 300.0},
+    'height': {'min': 0.01, 'max': 3.00},
+    'weight': {'min': 0.1, 'max': 500.0},
     'bmi': {'min': 10.0, 'max': 60.0},
-    'systolic_bp': {'min': 60, 'max': 280},
-    'diastolic_bp': {'min': 30, 'max': 180},
-    'heart_rate': {'min': 30, 'max': 250},
-    'oxygen_saturation': {'min': 50, 'max': 100},
+    'systolic_bp': {'min': 50, 'max': 300},
+    'diastolic_bp': {'min': 30, 'max': 200},
+    'heart_rate': {'min': 30, 'max': 220},
+    'oxygen_saturation': {'min': 0, 'max': 100},
     'glucose': {'min': 20.0, 'max': 600.0},
-    'cholesterol': {'min': 50.0, 'max': 500.0},
-    'cholesterol_ldl': {'min': 10.0, 'max': 350.0},
-    'cholesterol_hdl': {'min': 5.0, 'max': 120.0},
+    'cholesterol': {'min': 0, 'max': 500.0},
     'triglycerides': {'min': 20.0, 'max': 2000.0},
     'hemoglobin': {'min': 5.0, 'max': 20.0},
     'creatinine': {'min': 0.1, 'max': 15.0},
 }
 
 CLINICAL_ALERT_RULES = [
-    {'parameter': 'systolic_bp', 'condition': '>=', 'threshold': 180, 'severity': 'critical', 'alert_type': 'Hipertensión Crítica'},
-    {'parameter': 'systolic_bp', 'condition': '>=', 'threshold': 140, 'severity': 'warning', 'alert_type': 'Hipertensión'},
+    {'parameter': 'systolic_bp', 'condition': '>=', 'threshold': 180, 'severity': 'critical', 'alert_type': 'Crisis Hipertensiva'},
+    {'parameter': 'diastolic_bp', 'condition': '>=', 'threshold': 120, 'severity': 'critical', 'alert_type': 'Crisis Hipertensiva'},
+    {'parameter': 'systolic_bp', 'condition': '>=', 'threshold': 140, 'severity': 'warning', 'alert_type': 'Hipertensión Etapa 2'},
+    {'parameter': 'systolic_bp', 'condition': '>=', 'threshold': 130, 'severity': 'info', 'alert_type': 'Hipertensión Etapa 1'},
     {'parameter': 'glucose', 'condition': '>=', 'threshold': 300, 'severity': 'critical', 'alert_type': 'Hiperglucemia Crítica'},
-    {'parameter': 'glucose', 'condition': '>=', 'threshold': 126, 'severity': 'warning', 'alert_type': 'Hiperglucemia'},
+    {'parameter': 'glucose', 'condition': '>=', 'threshold': 126, 'severity': 'warning', 'alert_type': 'Diabetes'},
+    {'parameter': 'glucose', 'condition': '>=', 'threshold': 100, 'severity': 'info', 'alert_type': 'Prediabetes'},
+    {'parameter': 'glucose', 'condition': '<', 'threshold': 70, 'severity': 'warning', 'alert_type': 'Hipoglucemia'},
     {'parameter': 'oxygen_saturation', 'condition': '<=', 'threshold': 85, 'severity': 'critical', 'alert_type': 'Hipoxia Crítica'},
-    {'parameter': 'oxygen_saturation', 'condition': '<=', 'threshold': 90, 'severity': 'warning', 'alert_type': 'Hipoxia'},
-    {'parameter': 'heart_rate', 'condition': '>=', 'threshold': 120, 'severity': 'warning', 'alert_type': 'Taquicardia'},
-    {'parameter': 'heart_rate', 'condition': '<=', 'threshold': 50, 'severity': 'warning', 'alert_type': 'Bradicardia'},
-    {'parameter': 'bmi', 'condition': '>=', 'threshold': 40, 'severity': 'warning', 'alert_type': 'Obesidad Mórbida'},
+    {'parameter': 'oxygen_saturation', 'condition': '<=', 'threshold': 90, 'severity': 'warning', 'alert_type': 'Hipoxia Moderada'},
+    {'parameter': 'oxygen_saturation', 'condition': '<=', 'threshold': 95, 'severity': 'info', 'alert_type': 'Hipoxia Leve'},
+    {'parameter': 'heart_rate', 'condition': '>', 'threshold': 150, 'severity': 'critical', 'alert_type': 'Taquicardia Grave'},
+    {'parameter': 'heart_rate', 'condition': '<', 'threshold': 40, 'severity': 'critical', 'alert_type': 'Bradicardia Grave'},
+    {'parameter': 'heart_rate', 'condition': '>', 'threshold': 100, 'severity': 'warning', 'alert_type': 'Taquicardia'},
+    {'parameter': 'heart_rate', 'condition': '<', 'threshold': 60, 'severity': 'info', 'alert_type': 'Bradicardia'},
+    {'parameter': 'bmi', 'condition': '>=', 'threshold': 40, 'severity': 'critical', 'alert_type': 'Obesidad Mórbida'},
+    {'parameter': 'bmi', 'condition': '>=', 'threshold': 35, 'severity': 'warning', 'alert_type': 'Obesidad Grado II'},
+    {'parameter': 'bmi', 'condition': '>=', 'threshold': 30, 'severity': 'info', 'alert_type': 'Obesidad Grado I'},
+    {'parameter': 'cholesterol', 'condition': '>=', 'threshold': 300, 'severity': 'critical', 'alert_type': 'Hipercolesterolemia Muy Alta'},
     {'parameter': 'cholesterol', 'condition': '>=', 'threshold': 240, 'severity': 'warning', 'alert_type': 'Hipercolesterolemia'},
+]
+
+BP_CLASSIFICATION = {
+    'normal': {'systolic': (None, 120), 'diastolic': (None, 80)},
+    'elevated': {'systolic': (120, 130), 'diastolic': (None, 80)},
+    'hypertension_stage_1': {'systolic': (130, 140), 'diastolic': (80, 90)},
+    'hypertension_stage_2': {'systolic': (140, None), 'diastolic': (90, None)},
+    'crisis': {'systolic': (180, None), 'diastolic': (120, None)},
+}
+
+HR_CLASSIFICATION = {
+    'normal': (60, 100),
+    'bradycardia': (None, 60),
+    'tachycardia': (100, None),
+    'severe_tachycardia': (150, None),
+    'severe_bradycardia': (None, 40),
+}
+
+O2_CLASSIFICATION = {
+    'normal': (95, 100),
+    'mild_hypoxia': (90, 95),
+    'moderate_hypoxia': (85, 90),
+    'critical_hypoxia': (None, 85),
+}
+
+BMI_CLASSIFICATION = {
+    'underweight': (None, 18.5),
+    'normal': (18.5, 25),
+    'overweight': (25, 30),
+    'obese_i': (30, 35),
+    'obese_ii': (35, 40),
+    'obese_iii': (40, None),
+}
+
+GLUCOSE_CLASSIFICATION = {
+    'hypoglycemia': (None, 70),
+    'normal': (70, 100),
+    'prediabetes': (100, 126),
+    'diabetes': (126, None),
+}
+
+CHOLESTEROL_CLASSIFICATION = {
+    'desirable': (None, 200),
+    'borderline_high': (200, 240),
+    'high': (240, 300),
+    'very_high': (300, None),
+}
+
+RISK_CRITICAL_CONDITIONS = [
+    ('oxygen_saturation', '<', 85, 'critical_hypoxia'),
+    ('systolic_bp', '>=', 180, 'hypertensive_crisis'),
+    ('diastolic_bp', '>=', 120, 'hypertensive_crisis'),
+    ('heart_rate', '>', 150, 'severe_tachycardia'),
+    ('heart_rate', '<', 40, 'severe_bradycardia'),
+    ('bmi', '>=', 40, 'morbid_obesity'),
+]
+
+RISK_HIGH_CONDITIONS = [
+    ('systolic_bp', '>=', 140, 'hypertension_stage_2'),
+    ('diastolic_bp', '>=', 90, 'hypertension_stage_2'),
+    ('glucose', '>=', 126, 'diabetes'),
+    ('bmi', '>=', 35, 'obesity_grade_ii'),
+    ('oxygen_saturation', '<=', 90, 'moderate_hypoxia'),
+    ('cholesterol', '>=', 240, 'high_cholesterol'),
+]
+
+RISK_MODERATE_CONDITIONS = [
+    ('systolic_bp', '>=', 120, 'elevated_bp'),
+    ('glucose', '>=', 100, 'prediabetes'),
+    ('bmi', '>=', 25, 'overweight'),
+    ('cholesterol', '>=', 200, 'borderline_cholesterol'),
+    ('heart_rate', '>', 100, 'tachycardia'),
+    ('heart_rate', '<', 60, 'bradycardia'),
+    ('oxygen_saturation', '<=', 95, 'mild_hypoxia'),
+    ('diastolic_bp', '>=', 80, 'elevated_bp'),
 ]
 
 DIAGNOSIS_MAPPING = {
@@ -96,29 +179,8 @@ BMI_CATEGORIES = [
     (25, 30, 'overweight', 'Sobrepeso'),
     (30, 35, 'obese_i', 'Obesidad Grado I'),
     (35, 40, 'obese_ii', 'Obesidad Grado II'),
-    (40, float('inf'), 'obese_iii', 'Obesidad Grado III'),
+    (40, float('inf'), 'obese_iii', 'Obesidad Mórbida'),
 ]
-
-RISK_RULES = {
-    'critical': [
-        ('systolic_bp', '>=', 180),
-        ('oxygen_saturation', '<=', 85),
-        ('glucose', '>=', 300),
-    ],
-    'high': [
-        ('systolic_bp', '>=', 160),
-        ('glucose', '>=', 200),
-        ('bmi', '>=', 40),
-        ('cholesterol', '>=', 300),
-    ],
-    'medium': [
-        ('systolic_bp', '>=', 140),
-        ('glucose', '>=', 126),
-        ('bmi', '>=', 30),
-        ('smoking', '==', True),
-        ('family_history', '==', True),
-    ],
-}
 
 NORMAL_VALUES = {
     'systolic_bp': 120,
@@ -127,8 +189,6 @@ NORMAL_VALUES = {
     'oxygen_saturation': 97,
     'glucose': 95.0,
     'cholesterol': 190.0,
-    'cholesterol_ldl': 100.0,
-    'cholesterol_hdl': 45.0,
     'triglycerides': 150.0,
     'hemoglobin': 14.0,
     'creatinine': 0.9,

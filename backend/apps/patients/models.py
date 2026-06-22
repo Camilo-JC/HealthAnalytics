@@ -10,16 +10,6 @@ class Patient(models.Model):
         FEMALE = 'F', _('Femenino')
         OTHER = 'O', _('Otro')
 
-    class BloodType(models.TextChoices):
-        A_POS = 'A+', 'A+'
-        A_NEG = 'A-', 'A-'
-        B_POS = 'B+', 'B+'
-        B_NEG = 'B-', 'B-'
-        AB_POS = 'AB+', 'AB+'
-        AB_NEG = 'AB-', 'AB-'
-        O_POS = 'O+', 'O+'
-        O_NEG = 'O-', 'O-'
-
     class RiskCategory(models.TextChoices):
         LOW = 'low', _('Bajo')
         MEDIUM = 'medium', _('Medio')
@@ -44,7 +34,6 @@ class Patient(models.Model):
     # Datos demográficos
     age = models.IntegerField(_('edad'), validators=[MinValueValidator(0), MaxValueValidator(120)])
     gender = models.CharField(_('sexo'), max_length=1, choices=Gender.choices)
-    blood_type = models.CharField(_('tipo sanguíneo'), max_length=3, choices=BloodType.choices, blank=True, null=True)
 
     # Signos vitales
     height = models.DecimalField(_('altura (m)'), max_digits=4, decimal_places=2, validators=[MinValueValidator(Decimal('0.50')), MaxValueValidator(Decimal('2.50'))])
@@ -59,8 +48,6 @@ class Patient(models.Model):
     # Laboratorio
     glucose = models.DecimalField(_('glucosa (mg/dL)'), max_digits=6, decimal_places=1, validators=[MinValueValidator(Decimal('20.0')), MaxValueValidator(Decimal('600.0'))])
     cholesterol = models.DecimalField(_('colesterol total (mg/dL)'), max_digits=6, decimal_places=1, validators=[MinValueValidator(Decimal('50.0')), MaxValueValidator(Decimal('500.0'))])
-    cholesterol_ldl = models.DecimalField(_('colesterol LDL (mg/dL)'), max_digits=6, decimal_places=1, null=True, blank=True)
-    cholesterol_hdl = models.DecimalField(_('colesterol HDL (mg/dL)'), max_digits=6, decimal_places=1, null=True, blank=True)
     triglycerides = models.DecimalField(_('triglicéridos (mg/dL)'), max_digits=6, decimal_places=1, null=True, blank=True)
     hemoglobin = models.DecimalField(_('hemoglobina (g/dL)'), max_digits=4, decimal_places=1, null=True, blank=True)
     creatinine = models.DecimalField(_('creatinina (mg/dL)'), max_digits=4, decimal_places=2, null=True, blank=True)

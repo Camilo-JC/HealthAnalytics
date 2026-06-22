@@ -22,7 +22,7 @@ class PatientListSerializer(serializers.ModelSerializer):
         model = Patient
         fields = (
             'id', 'patient_id', 'first_name', 'last_name', 'full_name', 'age', 'age_group', 'gender',
-            'blood_type', 'height', 'weight', 'bmi', 'bmi_category', 'diagnosis', 'diagnosis_code',
+            'height', 'weight', 'bmi', 'bmi_category', 'diagnosis', 'diagnosis_code',
             'risk_category', 'risk_score', 'glucose', 'systolic_bp', 'diastolic_bp',
             'heart_rate', 'oxygen_saturation', 'cholesterol',
             'smoking', 'alcohol_consumption', 'physical_activity', 'family_history',
@@ -64,9 +64,9 @@ class PatientCreateSerializer(serializers.ModelSerializer):
         model = Patient
         fields = (
             'patient_id', 'first_name', 'last_name', 'document_type', 'document_number',
-            'age', 'gender', 'blood_type', 'height', 'weight',
+            'age', 'gender', 'height', 'weight',
             'systolic_bp', 'diastolic_bp', 'heart_rate', 'oxygen_saturation',
-            'glucose', 'cholesterol', 'cholesterol_ldl', 'cholesterol_hdl',
+            'glucose', 'cholesterol',
             'triglycerides', 'hemoglobin', 'creatinine',
             'diagnosis', 'diagnosis_code', 'comorbidities',
             'smoking', 'alcohol_consumption', 'physical_activity', 'family_history',

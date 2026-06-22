@@ -60,8 +60,6 @@ function PatientDetailContent() {
   const labs = [
     { label: 'Glucosa', value: `${patient.glucose} mg/dL` },
     { label: 'Colesterol Total', value: `${patient.cholesterol} mg/dL` },
-    { label: 'Colesterol LDL', value: patient.cholesterol_ldl != null ? `${patient.cholesterol_ldl} mg/dL` : '—' },
-    { label: 'Colesterol HDL', value: patient.cholesterol_hdl != null ? `${patient.cholesterol_hdl} mg/dL` : '—' },
   ];
 
   return (
@@ -90,7 +88,6 @@ function PatientDetailContent() {
           <CardContent className="space-y-2 text-sm">
             <div className="flex justify-between"><span className="text-muted-foreground">Edad</span><span className="font-medium">{patient.age} años</span></div>
             <div className="flex justify-between"><span className="text-muted-foreground">Género</span><span className="font-medium">{translateGender(patient.gender)}</span></div>
-            <div className="flex justify-between"><span className="text-muted-foreground">Tipo Sangre</span><span className="font-medium">{patient.blood_type || '—'}</span></div>
             <div className="flex justify-between"><span className="text-muted-foreground">Altura</span><span className="font-medium">{patient.height} m</span></div>
             <div className="flex justify-between"><span className="text-muted-foreground">Peso</span><span className="font-medium">{patient.weight} kg</span></div>
             <div className="flex justify-between"><span className="text-muted-foreground">IMC</span><span className="font-medium">{patient.bmi ? Number(patient.bmi).toFixed(1) : '—'}</span></div>

@@ -7,7 +7,7 @@ from decimal import Decimal, ROUND_HALF_UP
 from .base import BaseETLComponent
 from .clinical_rules import (
     CLINICAL_RANGES, DIAGNOSIS_MAPPING, DIAGNOSIS_CODES,
-    BMI_CATEGORIES, RISK_RULES, NORMAL_VALUES
+    BMI_CATEGORIES, NORMAL_VALUES
 )
 
 logger = logging.getLogger('etl')
@@ -30,9 +30,6 @@ COLUMN_MAPPING = {
     'sexo': 'gender',
     'genero': 'gender',
     'género': 'gender',
-    'tipo_sangre': 'blood_type',
-    'tipo_sanguineo': 'blood_type',
-    'rh': 'blood_type',
     'estatura': 'height',
     'altura': 'height',
     'talla': 'height',
@@ -61,8 +58,6 @@ COLUMN_MAPPING = {
     'glucosa': 'glucose',
     'colesterol': 'cholesterol',
     'colesterol_total': 'cholesterol',
-    'colesterol_ldl': 'cholesterol_ldl',
-    'colesterol_hdl': 'cholesterol_hdl',
     'trigliceridos': 'triglycerides',
     'triglicéridos': 'triglycerides',
     'hemoglobina': 'hemoglobin',
@@ -153,8 +148,7 @@ class Transformer(BaseETLComponent):
         numeric_fields = {
             'age': 'int', 'height': 'float', 'weight': 'float', 'bmi': 'float',
             'systolic_bp': 'int', 'diastolic_bp': 'int', 'heart_rate': 'int',
-            'oxygen_saturation': 'int', 'glucose': 'float', 'cholesterol': 'float',
-            'cholesterol_ldl': 'float', 'cholesterol_hdl': 'float',
+            'oxygen_saturation': 'int', 'glucose': 'float',             'cholesterol': 'float',
             'triglycerides': 'float', 'hemoglobin': 'float', 'creatinine': 'float',
         }
         for field, dtype in numeric_fields.items():
@@ -346,8 +340,6 @@ class Transformer(BaseETLComponent):
             'oxygen_saturation': (None, 97),
             'glucose': (None, 95.0),
             'cholesterol': (None, 190.0),
-            'cholesterol_ldl': (None, 100.0),
-            'cholesterol_hdl': (None, 45.0),
             'triglycerides': (None, 150.0),
             'hemoglobin': ('gender', lambda g: 14.0 if g == 'M' else 13.0),
             'creatinine': ('gender', lambda g: 0.9 if g == 'M' else 0.7),
@@ -400,117 +392,128 @@ class Transformer(BaseETLComponent):
         return df
 
     def _calculate_risk(self, df):
-        def _bp_score(sbp, dbp):
-            if pd.isna(sbp):
-                return 0
-            sbp, dbp = float(sbp), float(dbp) if pd.notna(dbp) else 0
-            if sbp >= 180 or dbp >= 120:
-                return 4
-            if sbp >= 140 or dbp >= 90:
-                return 3
-            if sbp >= 130 or dbp >= 80:
-                return 2
-            if sbp >= 120:
-                return 1
-            return 0
-
-        def _glucose_score(glu):
-            if pd.isna(glu):
-                return 0
-            glu = float(glu)
-            if glu >= 300:
-                return 4
-            if glu >= 200:
-                return 3
-            if glu >= 126:
-                return 2
-            if glu >= 100:
-                return 1
-            return 0
-
-        def _bmi_score(bmi):
-            if pd.isna(bmi):
-                return 0
-            bmi = float(bmi)
-            if bmi >= 40:
-                return 4
-            if bmi >= 35:
-                return 3
-            if bmi >= 30:
-                return 2
-            if bmi >= 25:
-                return 1
-            return 0
-
-        def _cholesterol_score(col):
-            if pd.isna(col):
-                return 0
-            col = float(col)
-            if col >= 240:
-                return 2
-            if col >= 200:
-                return 1
-            return 0
-
-        def _oxygen_score(o2):
-            if pd.isna(o2):
-                return 0
-            o2 = float(o2)
-            if o2 < 85:
-                return 4
-            if o2 < 90:
-                return 3
-            if o2 < 95:
-                return 1
-            return 0
-
-        def _hr_score(hr):
-            if pd.isna(hr):
-                return 0
-            hr = float(hr)
-            if hr > 120 or hr < 50:
-                return 2
-            if hr > 100 or hr < 60:
-                return 1
-            return 0
+        def _check_condition(value, op, threshold):
+            if pd.isna(value):
+                return False
+            v = float(value)
+            if op == '>=':
+                return v >= threshold
+            elif op == '<':
+                return v < threshold
+            elif op == '<=':
+                return v <= threshold
+            elif op == '>':
+                return v > threshold
+            return False
 
         def calc_risk(row):
-            sbp = _bp_score(row.get('systolic_bp'), row.get('diastolic_bp'))
-            glu = _glucose_score(row.get('glucose'))
-            bmi = _bmi_score(row.get('bmi'))
-            col = _cholesterol_score(row.get('cholesterol'))
-            o2 = _oxygen_score(row.get('oxygen_saturation'))
-            hr = _hr_score(row.get('heart_rate'))
+            risk_score = 0
+            lifestyle_score = 0
 
-            lifestyle = 0
+            if _check_condition(row.get('systolic_bp'), '>', 140):
+                risk_score += 20
+            elif _check_condition(row.get('systolic_bp'), '>=', 130):
+                risk_score += 15
+            elif _check_condition(row.get('systolic_bp'), '>=', 120):
+                risk_score += 5
+
+            if _check_condition(row.get('glucose'), '>=', 300):
+                risk_score += 20
+            elif _check_condition(row.get('glucose'), '>=', 200):
+                risk_score += 15
+            elif _check_condition(row.get('glucose'), '>=', 126):
+                risk_score += 10
+            elif _check_condition(row.get('glucose'), '>=', 100):
+                risk_score += 5
+
+            bmi_val = row.get('bmi')
+            if _check_condition(bmi_val, '>=', 40):
+                risk_score += 15
+            elif _check_condition(bmi_val, '>=', 35):
+                risk_score += 10
+            elif _check_condition(bmi_val, '>=', 30):
+                risk_score += 5
+            elif _check_condition(bmi_val, '>=', 25):
+                risk_score += 2
+
+            if _check_condition(row.get('cholesterol'), '>=', 300):
+                risk_score += 15
+            elif _check_condition(row.get('cholesterol'), '>=', 240):
+                risk_score += 10
+            elif _check_condition(row.get('cholesterol'), '>=', 200):
+                risk_score += 5
+
+            if _check_condition(row.get('oxygen_saturation'), '<', 85):
+                risk_score += 20
+            elif _check_condition(row.get('oxygen_saturation'), '<=', 90):
+                risk_score += 10
+            elif _check_condition(row.get('oxygen_saturation'), '<=', 95):
+                risk_score += 3
+
+            if _check_condition(row.get('heart_rate'), '>', 150):
+                risk_score += 15
+            elif _check_condition(row.get('heart_rate'), '<', 40):
+                risk_score += 15
+            elif _check_condition(row.get('heart_rate'), '>', 100):
+                risk_score += 5
+            elif _check_condition(row.get('heart_rate'), '<', 60):
+                risk_score += 3
+
             if row.get('smoking'):
-                lifestyle += 1
+                lifestyle_score += 10
             if not row.get('physical_activity'):
-                lifestyle += 1
+                lifestyle_score += 5
             if row.get('alcohol_consumption'):
-                lifestyle += 1
+                lifestyle_score += 3
             if row.get('family_history'):
-                lifestyle += 1
+                lifestyle_score += 5
 
-            max_single = max(sbp, glu, bmi, col, o2, hr)
-            total = sbp + glu + bmi + col + o2 + hr + lifestyle
+            total_score = risk_score + lifestyle_score
+            total_score = min(total_score, 100)
 
-            has_crisis = (pd.notna(row.get('systolic_bp')) and float(row['systolic_bp']) >= 180) or \
-                         (pd.notna(row.get('glucose')) and float(row['glucose']) >= 300) or \
-                         (pd.notna(row.get('oxygen_saturation')) and float(row['oxygen_saturation']) < 85)
+            for param, op, threshold, _ in [
+                ('oxygen_saturation', '<', 85, None),
+                ('systolic_bp', '>=', 180, None),
+                ('diastolic_bp', '>=', 120, None),
+                ('heart_rate', '>', 150, None),
+                ('heart_rate', '<', 40, None),
+                ('bmi', '>=', 40, None),
+            ]:
+                if _check_condition(row.get(param), op, threshold):
+                    return 'critical', round(total_score, 2)
 
-            if has_crisis or total >= 9:
-                category = 'critical'
-            elif max_single >= 4 or total >= 6 or (lifestyle >= 3 and max_single >= 2):
-                category = 'high'
-            elif max_single >= 2 or total >= 3 or lifestyle >= 3:
-                category = 'medium'
-            else:
-                category = 'low'
+            high_chol_plus_risk = (
+                _check_condition(row.get('cholesterol'), '>=', 300)
+                and (risk_score >= 20 or lifestyle_score >= 10)
+            )
+            if high_chol_plus_risk:
+                return 'critical', round(total_score, 2)
 
-            risk_score = round(min(total / 14 * 100, 100), 2)
+            for param, op, threshold, _ in [
+                ('systolic_bp', '>=', 140, None),
+                ('diastolic_bp', '>=', 90, None),
+                ('glucose', '>=', 126, None),
+                ('bmi', '>=', 35, None),
+                ('oxygen_saturation', '<=', 90, None),
+                ('cholesterol', '>=', 240, None),
+            ]:
+                if _check_condition(row.get(param), op, threshold):
+                    return 'high', round(total_score, 2)
 
-            return category, risk_score
+            for param, op, threshold, _ in [
+                ('systolic_bp', '>=', 120, None),
+                ('glucose', '>=', 100, None),
+                ('bmi', '>=', 25, None),
+                ('cholesterol', '>=', 200, None),
+                ('heart_rate', '>', 100, None),
+                ('heart_rate', '<', 60, None),
+                ('oxygen_saturation', '<=', 95, None),
+                ('diastolic_bp', '>=', 80, None),
+            ]:
+                if _check_condition(row.get(param), op, threshold):
+                    return 'medium', round(total_score, 2)
+
+            return 'low', round(total_score, 2)
 
         categories, scores = zip(*df.apply(calc_risk, axis=1))
         df['risk_category'] = categories

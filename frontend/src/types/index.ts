@@ -52,7 +52,6 @@ export interface Patient {
   document_number: string;
   age: number;
   gender: string;
-  blood_type: string;
   height: number;
   weight: number;
   bmi: number;
@@ -63,8 +62,6 @@ export interface Patient {
   oxygen_saturation: number;
   glucose: number;
   cholesterol: number;
-  cholesterol_ldl: number | null;
-  cholesterol_hdl: number | null;
   triglycerides: number | null;
   hemoglobin: number | null;
   creatinine: number | null;
