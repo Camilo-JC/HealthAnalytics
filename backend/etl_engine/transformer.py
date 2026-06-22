@@ -116,6 +116,7 @@ class Transformer(BaseETLComponent):
         df = self._calculate_bmi(df)
         df = self._classify_bmi(df)
         df = self._calculate_risk(df)
+        df = self._assign_clinical_diagnosis(df)
 
         self.log('info', f"Transformación completada: {len(df)} registros válidos", 'TRANSFORM', self.stats)
         return df
@@ -515,6 +516,82 @@ class Transformer(BaseETLComponent):
         df['risk_category'] = categories
         df['risk_score'] = scores
         self.log('info', f"Riesgo calculado para {len(df)} pacientes", 'TRANSFORM')
+        return df
+
+    def _is_healthy_diagnosis(self, diag):
+        if pd.isna(diag) or not str(diag).strip():
+            return True
+        keywords = ['sano', 'sana', 'saludable', 'healthy', 'ninguno', 'ninguna',
+                    'none', 'sin diagnostico', 'sin diagnóstico',
+                    'normal', 'bueno', 'buena', 'excelente']
+        d = str(diag).lower().strip()
+        return any(k in d for k in keywords)
+
+    def _assign_clinical_diagnosis(self, df):
+        if 'diagnosis' not in df.columns:
+            df['diagnosis'] = np.nan
+        if 'diagnosis_code' not in df.columns:
+            df['diagnosis_code'] = np.nan
+
+        def detect_conditions(row):
+            conditions = {}
+            if pd.notna(row.get('systolic_bp')):
+                sbp = float(row['systolic_bp'])
+                dbp = float(row['diastolic_bp']) if pd.notna(row.get('diastolic_bp')) else 0
+                if sbp >= 140 or dbp >= 90:
+                    conditions['Hypertension'] = 'I10'
+                elif sbp >= 130 or dbp >= 80:
+                    conditions['Hypertension'] = 'I10'
+            if pd.notna(row.get('glucose')):
+                glu = float(row['glucose'])
+                if glu >= 200:
+                    conditions['Diabetes Mellitus'] = 'E11'
+                elif glu >= 126:
+                    conditions['Diabetes Mellitus'] = 'E11'
+            if pd.notna(row.get('bmi')):
+                bmi = float(row['bmi'])
+                if bmi >= 40:
+                    conditions['Morbid Obesity'] = 'E66.0'
+                elif bmi >= 30:
+                    conditions['Obesity'] = 'E66'
+            if pd.notna(row.get('cholesterol')):
+                col = float(row['cholesterol'])
+                if col >= 240:
+                    conditions['Hypercholesterolemia'] = ''
+            return conditions
+
+        def assign(row):
+            diag = row.get('diagnosis')
+            code = row.get('diagnosis_code')
+            conditions = detect_conditions(row)
+            if not conditions:
+                return diag, code
+
+            is_healthy = self._is_healthy_diagnosis(diag)
+            existing = set()
+            if pd.notna(diag):
+                for part in str(diag).split(','):
+                    existing.add(part.strip().lower())
+
+            missing = {k: v for k, v in conditions.items() if k.lower() not in existing}
+
+            if not missing:
+                return diag, code
+
+            if is_healthy:
+                result_diag = ', '.join(missing.keys())
+                result_code = ', '.join(v for v in missing.values() if v)
+            else:
+                result_diag = str(diag) + ', ' + ', '.join(missing.keys())
+                result_code = str(code) + ', ' + ', '.join(v for v in missing.values() if v) if pd.notna(code) else ', '.join(v for v in missing.values() if v)
+
+            return result_diag, result_code
+
+        result = df.apply(assign, axis=1, result_type='expand')
+        df['diagnosis'] = result[0]
+        df['diagnosis_code'] = result[1]
+
+        self.log('info', "Diagnósticos clínicos complementados con datos del paciente", 'TRANSFORM')
         return df
 
     def get_stats(self):
