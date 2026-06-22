@@ -184,37 +184,84 @@ class Transformer(BaseETLComponent):
         return df
 
     @staticmethod
+    def _unaccent(text):
+        return (text.replace('á', 'a').replace('é', 'e').replace('í', 'i')
+                    .replace('ó', 'o').replace('ú', 'u').replace('ü', 'u'))
+
+    @staticmethod
     def _infer_gender_from_name(name):
+        import unicodedata
         if pd.isna(name) or not str(name).strip():
             return None
         first = str(name).strip().split()[0].lower()
-        if first.endswith(('a', 'ita', 'ina', 'ona', 'ora', 'iana', 'ela')):
-            return 'F'
-        if first.endswith(('o', 'io', 'ito', 'ino', 'ero', 'oro')):
-            return 'M'
-        male_names = {'jose', 'josé', 'luis', 'carlos', 'manuel', 'david', 'juan', 'jorge',
-            'pedro', 'rafael', 'fernando', 'andres', 'andrés', 'alvaro', 'álvaro', 'santiago',
-            'felipe', 'sebastian', 'sebastián', 'nicolas', 'nicolás', 'diego', 'javier',
-            'miguel', 'angel', 'ángel', 'ramon', 'ramón', 'simon', 'simón', 'tomas', 'tomás',
-            'julian', 'julián', 'martin', 'martín', 'pablo', 'adrian', 'adrián', 'daniel',
-            'benjamin', 'benjamín', 'vicente', 'esteban', 'mateo', 'matias', 'matías',
-            'francisco', 'jesus', 'jesús', 'cristian', 'cristhian', 'kevin', 'brandon',
+        first_norm = Transformer._unaccent(first)
+
+        # Check name lists FIRST (higher priority than suffix heuristics)
+        male_names = {
+            'jose', 'luis', 'carlos', 'manuel', 'david', 'juan', 'jorge',
+            'pedro', 'rafael', 'fernando', 'andres', 'alvaro', 'santiago',
+            'felipe', 'sebastian', 'nicolas', 'diego', 'javier',
+            'miguel', 'angel', 'ramon', 'simon', 'tomas',
+            'julian', 'martin', 'pablo', 'adrian', 'daniel',
+            'benjamin', 'vicente', 'esteban', 'mateo', 'matias',
+            'francisco', 'jesus', 'cristian', 'cristhian', 'kevin', 'brandon',
             'brayan', 'bryan', 'jhon', 'jhonatan', 'jonathan', 'jonatan', 'ismael',
-            'samuel', 'moises', 'moisés', 'elias', 'elías', 'isaac', 'noe', 'noé',
-            'alan', 'ivan', 'ivan', 'edwin', 'wilson', 'wilmer', 'oswaldo', 'rodolfo',
-            'nelson', 'hector', 'héctor', 'leonardo', 'guillermo', 'hernando', 'ricardo',
-            'eduardo', 'alfonso', 'alfredo', 'rodrigo', 'camilo', 'mauricio', 'octavio'}
-        if first in male_names:
+            'samuel', 'moises', 'elias', 'isaac', 'noe',
+            'alan', 'ivan', 'edwin', 'wilson', 'wilmer', 'oswaldo', 'rodolfo',
+            'nelson', 'hector', 'leonardo', 'guillermo', 'hernando', 'ricardo',
+            'eduardo', 'alfonso', 'alfredo', 'rodrigo', 'camilo', 'mauricio', 'octavio',
+            'oscar', 'ulises', 'homero', 'orlando', 'raul', 'humberto',
+            'roberto', 'alberto', 'ruben', 'gabriel', 'ezequiel', 'raul',
+            'jesus', 'joel', 'saul', 'aaron', 'jacobo', 'uriel', 'eder',
+            'fabian', 'gerardo', 'ernesto', 'marcos', 'lucas', 'esteban',
+            'rene', 'emilio', 'fidel', 'german', 'hugo', 'ignacio',
+            'jaime', 'joaquin', 'leonel', 'marco', 'mario', 'maximo',
+            'oliver', 'pascual', 'patricio', 'roque', 'salvador', 'teodoro',
+            'valentin', 'william', 'ximeno', 'yonathan', 'zacarias',
+            'abraham', 'axel', 'blas', 'cesar', 'cristobal', 'domingo',
+            'eleazar', 'enrique', 'eugenio', 'fausto', 'felix', 'florencio',
+            'genaro', 'gilberto', 'heriberto', 'honorio', 'isaias', 'isidro',
+            'jeremias', 'jonas', 'josue', 'laureano', 'lazaro', 'lorenzo',
+            'macario', 'melchor', 'narciso', 'natanael', 'norberto', 'oliverio',
+            'primo', 'reinaldo', 'rolando', 'servando', 'tadeo', 'timoteo',
+            'tobias', 'troy', 'valerio', 'victor', 'wenceslao', 'yadiel',
+            'yair', 'yamil', 'yoel', 'yonaiker', 'yordi',
+        }
+        if first_norm in male_names:
             return 'M'
-        female_names = {'raquel', 'ester', 'esther', 'yolanda', 'amparo', 'consuelo',
+
+        # Expanded female names (stored unaccented for matching)
+        female_names = {
+            'raquel', 'ester', 'esther', 'yolanda', 'amparo', 'consuelo',
             'mercedes', 'montserrat', 'carmen', 'milagros', 'pilar', 'socorro', 'nieves',
-            'luz', 'virtudes', 'dolores', 'asunción', 'asuncion', 'concepción', 'concepcion',
-            'angustias', 'esperanza', 'encarnación', 'encarnacion', 'noemi', 'noemí',
+            'luz', 'virtudes', 'dolores', 'asuncion', 'concepcion',
+            'angustias', 'esperanza', 'encarnacion', 'noemi',
             'nayibe', 'yaritza', 'yenifer', 'yessica', 'yuliana', 'paulina', 'camila',
-            'valentina', 'laura', 'maria', 'maría', 'ana', 'gabriela', 'fernanda',
-            'ximena', 'jimena', 'carolina', 'daniela', 'tatiana', 'katherine', 'johanna'}
-        if first in female_names:
+            'valentina', 'laura', 'maria', 'ana', 'gabriela', 'fernanda',
+            'ximena', 'jimena', 'carolina', 'daniela', 'tatiana', 'katherine', 'johanna',
+            'adriana', 'alejandra', 'alicia', 'beatriz', 'bianca', 'blanca',
+            'caridad', 'catalina', 'cecilia', 'clara', 'cristina', 'elena',
+            'elisa', 'elvira', 'emilia', 'esmeralda', 'eugenia', 'evangelina',
+            'flor', 'genoveva', 'gloria', 'graciela', 'guadalupe', 'ines',
+            'irene', 'irma', 'jacinta', 'josefina', 'juana', 'julia',
+            'leonor', 'leticia', 'lidia', 'liliana', 'lorena', 'lucia',
+            'luisa', 'lourdes', 'magdalena', 'margarita', 'maribel', 'marina',
+            'marta', 'micaela', 'monica', 'natalia', 'norma', 'olga',
+            'patricia', 'paulina', 'perla', 'rebeca', 'rosa', 'rosalia',
+            'rosario', 'sandra', 'sara', 'silvia', 'sofia', 'soledad',
+            'susana', 'teresa', 'veronica', 'victoria', 'viviana', 'zoraida',
+        }
+        if first_norm in female_names:
             return 'F'
+
+        # Suffix-based inference (fallback, lower priority)
+        if first_norm.endswith(('a', 'ita', 'ina', 'ona', 'ora', 'iana', 'ela')):
+            return 'F'
+        if first_norm.endswith(('o', 'io', 'ito', 'ino', 'ero', 'oro', 'iano')):
+            return 'M'
+        if first_norm.endswith(('el', 'ol', 'il', 'al')):
+            return 'M'
+
         return None
 
     def _normalize_gender(self, df):
