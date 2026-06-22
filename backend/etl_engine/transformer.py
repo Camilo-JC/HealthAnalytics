@@ -581,6 +581,8 @@ class Transformer(BaseETLComponent):
             code = row.get('diagnosis_code')
             conditions = detect_conditions(row)
             if not conditions:
+                if pd.isna(diag) or self._is_healthy_diagnosis(diag):
+                    return 'Sano', ''
                 return diag, code
 
             is_healthy = self._is_healthy_diagnosis(diag)
