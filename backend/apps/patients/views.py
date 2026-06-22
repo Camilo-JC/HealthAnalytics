@@ -37,6 +37,7 @@ class PatientViewSet(viewsets.ModelViewSet):
         'glucose': ['gte', 'lte'],
         'cholesterol': ['gte', 'lte'],
         'is_valid': ['exact'],
+        'diagnosis': ['exact', 'icontains'],
         'diagnosis_code': ['exact', 'in'],
     }
     search_fields = [

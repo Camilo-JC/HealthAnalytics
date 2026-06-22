@@ -64,7 +64,7 @@ function PatientsContent() {
   const [totalPages, setTotalPages] = useState(1);
   const [search, setSearch] = useState('');
   const [showFilters, setShowFilters] = useState(false);
-  const [filters, setFilters] = useState({ gender: '', risk_category: '', bmi_category: '', smoking: '' });
+  const [filters, setFilters] = useState({ gender: '', risk_category: '', bmi_category: '', smoking: '', diagnosis: '' });
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -80,7 +80,15 @@ function PatientsContent() {
     setLoading(true);
     const params = new URLSearchParams({ page: String(page), page_size: String(pageSize) });
     if (search) params.set('search', search);
-    Object.entries(filters).forEach(([k, v]) => { if (v) params.set(k, v); });
+    Object.entries(filters).forEach(([k, v]) => {
+      if (v) {
+        if (k === 'diagnosis') {
+          params.set('diagnosis__icontains', v);
+        } else {
+          params.set(k, v);
+        }
+      }
+    });
     apiRequest<{ success: boolean; count: number; total_pages: number; results: Patient[] }>(`/patients/?${params}`)
       .then(r => { setPatients(r.results); setTotal(r.count); setTotalPages(r.total_pages || 1); })
       .catch(() => {})
@@ -99,7 +107,7 @@ function PatientsContent() {
   };
 
   const clearFilters = () => {
-    setFilters({ gender: '', risk_category: '', bmi_category: '', smoking: '' });
+    setFilters({ gender: '', risk_category: '', bmi_category: '', smoking: '', diagnosis: '' });
     setPage(1);
   };
 
@@ -240,6 +248,11 @@ function PatientsContent() {
                   { value: 'false', label: 'No' },
                 ]} placeholder="Todos" value={filters.smoking}
                   onChange={e => updateFilter('smoking', e.target.value)} />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-medium text-muted-foreground">Diagnóstico</label>
+                <Input placeholder="Filtrar por diagnóstico..." className="h-9 text-xs" value={filters.diagnosis}
+                  onChange={e => updateFilter('diagnosis', e.target.value)} />
               </div>
               {hasActiveFilters && (
                 <Button variant="ghost" size="sm" onClick={clearFilters}>
