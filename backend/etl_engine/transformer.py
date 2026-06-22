@@ -399,67 +399,115 @@ class Transformer(BaseETLComponent):
         return df
 
     def _calculate_risk(self, df):
+        def _bp_score(sbp, dbp):
+            if pd.isna(sbp):
+                return 0
+            sbp, dbp = float(sbp), float(dbp) if pd.notna(dbp) else 0
+            if sbp >= 180 or dbp >= 120:
+                return 4
+            if sbp >= 140 or dbp >= 90:
+                return 3
+            if sbp >= 130 or dbp >= 80:
+                return 2
+            if sbp >= 120:
+                return 1
+            return 0
+
+        def _glucose_score(glu):
+            if pd.isna(glu):
+                return 0
+            glu = float(glu)
+            if glu >= 300:
+                return 4
+            if glu >= 200:
+                return 3
+            if glu >= 126:
+                return 2
+            if glu >= 100:
+                return 1
+            return 0
+
+        def _bmi_score(bmi):
+            if pd.isna(bmi):
+                return 0
+            bmi = float(bmi)
+            if bmi >= 40:
+                return 4
+            if bmi >= 35:
+                return 3
+            if bmi >= 30:
+                return 2
+            if bmi >= 25:
+                return 1
+            return 0
+
+        def _cholesterol_score(col):
+            if pd.isna(col):
+                return 0
+            col = float(col)
+            if col >= 240:
+                return 2
+            if col >= 200:
+                return 1
+            return 0
+
+        def _oxygen_score(o2):
+            if pd.isna(o2):
+                return 0
+            o2 = float(o2)
+            if o2 < 85:
+                return 4
+            if o2 < 90:
+                return 3
+            if o2 < 95:
+                return 1
+            return 0
+
+        def _hr_score(hr):
+            if pd.isna(hr):
+                return 0
+            hr = float(hr)
+            if hr > 120 or hr < 50:
+                return 2
+            if hr > 100 or hr < 60:
+                return 1
+            return 0
+
         def calc_risk(row):
-            score = 0
-            max_score = 100
+            sbp = _bp_score(row.get('systolic_bp'), row.get('diastolic_bp'))
+            glu = _glucose_score(row.get('glucose'))
+            bmi = _bmi_score(row.get('bmi'))
+            col = _cholesterol_score(row.get('cholesterol'))
+            o2 = _oxygen_score(row.get('oxygen_saturation'))
+            hr = _hr_score(row.get('heart_rate'))
 
-            if pd.notna(row.get('age')) and row['age'] > 60:
-                score += 10
-            elif pd.notna(row.get('age')) and row['age'] > 45:
-                score += 5
-
-            if pd.notna(row.get('bmi')) and row['bmi'] >= 40:
-                score += 15
-            elif pd.notna(row.get('bmi')) and row['bmi'] >= 30:
-                score += 10
-            elif pd.notna(row.get('bmi')) and row['bmi'] >= 25:
-                score += 5
-
-            if pd.notna(row.get('systolic_bp')):
-                if row['systolic_bp'] >= 180:
-                    score += 20
-                elif row['systolic_bp'] >= 160:
-                    score += 15
-                elif row['systolic_bp'] >= 140:
-                    score += 10
-                elif row['systolic_bp'] >= 130:
-                    score += 5
-
-            if pd.notna(row.get('glucose')):
-                if row['glucose'] >= 300:
-                    score += 20
-                elif row['glucose'] >= 200:
-                    score += 15
-                elif row['glucose'] >= 126:
-                    score += 10
-                elif row['glucose'] >= 100:
-                    score += 5
-
-            if pd.notna(row.get('cholesterol')) and row['cholesterol'] >= 240:
-                score += 10
-
-            if pd.notna(row.get('heart_rate')) and row['heart_rate'] >= 100:
-                score += 5
-
+            lifestyle = 0
             if row.get('smoking'):
-                score += 10
-            if row.get('family_history'):
-                score += 5
+                lifestyle += 1
             if not row.get('physical_activity'):
-                score += 5
+                lifestyle += 1
             if row.get('alcohol_consumption'):
-                score += 5
+                lifestyle += 1
+            if row.get('family_history'):
+                lifestyle += 1
 
-            risk_score = min(score, max_score)
+            max_single = max(sbp, glu, bmi, col, o2, hr)
+            total = sbp + glu + bmi + col + o2 + hr + lifestyle
 
-            if risk_score >= 50:
+            has_crisis = (pd.notna(row.get('systolic_bp')) and float(row['systolic_bp']) >= 180) or \
+                         (pd.notna(row.get('glucose')) and float(row['glucose']) >= 300) or \
+                         (pd.notna(row.get('oxygen_saturation')) and float(row['oxygen_saturation']) < 85)
+
+            if has_crisis or total >= 9:
                 category = 'critical'
-            elif risk_score >= 30:
+            elif max_single >= 4 or total >= 6 or (lifestyle >= 3 and max_single >= 2):
                 category = 'high'
-            elif risk_score >= 15:
+            elif max_single >= 2 or total >= 3 or lifestyle >= 3:
                 category = 'medium'
             else:
                 category = 'low'
+
+            risk_score = round(min(total / 14 * 100, 100), 2)
 
             return category, risk_score
 
