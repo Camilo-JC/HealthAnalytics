@@ -9,16 +9,38 @@ import { Badge } from '@/components/ui/badge';
 import { apiRequest, getTokens } from '@/lib/api';
 import { toast } from 'sonner';
 import { formatNumber, getRiskColor, getRiskLabel } from '@/lib/utils';
-import { FileText, Download, FileSpreadsheet, FileDown } from 'lucide-react';
+import { FileText, Download, FileSpreadsheet, FileDown, Table2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import type { ReportData } from '@/types';
 
 const COLORS = ['#22c55e', '#eab308', '#f97316', '#ef4444'];
 
+interface RawDataResponse {
+  source_name: string;
+  source_type: string;
+  columns: string[];
+  rows: (string | number | boolean | null)[][];
+  total: number;
+  page: number;
+  max_rows: number;
+  total_pages: number;
+}
+
 function ReportsContent() {
   const { hasPermission } = useAuth();
   const [report, setReport] = useState<ReportData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [dataSources, setDataSources] = useState<any[]>([]);
+  const [selectedSourceId, setSelectedSourceId] = useState<number | null>(null);
+  const [rawData, setRawData] = useState<RawDataResponse | null>(null);
+  const [rawLoading, setRawLoading] = useState(false);
+  const [rawPage, setRawPage] = useState(0);
+  const [showRawData, setShowRawData] = useState(false);
+
+  useEffect(() => {
+    apiRequest<{ success: boolean; results: any[] }>('/etl/sources/?page_size=100')
+      .then(r => setDataSources(r.results || [])).catch(() => {});
+  }, []);
 
   useEffect(() => {
     apiRequest<{ success: boolean; data: ReportData }>('/reports/executive/')
@@ -82,6 +104,27 @@ function ReportsContent() {
       }
       toast.error('Error al descargar ' + format.toUpperCase());
     }
+  };
+
+  const fetchRawData = async (sourceId: number, page = 0) => {
+    setRawLoading(true);
+    setRawPage(page);
+    try {
+      const res = await apiRequest<{ success: boolean; data: RawDataResponse }>(
+        `/reports/raw/${sourceId}/?page=${page}&max_rows=50`
+      );
+      setRawData(res.data);
+    } catch {
+      toast.error('Error al cargar datos originales');
+    } finally {
+      setRawLoading(false);
+    }
+  };
+
+  const handleViewRaw = (sourceId: number) => {
+    setSelectedSourceId(sourceId);
+    setShowRawData(true);
+    fetchRawData(sourceId, 0);
   };
 
   if (loading) return (
@@ -184,6 +227,71 @@ function ReportsContent() {
           {demo?.avg_age ? ` Edad promedio de ${demo.avg_age} años, IMC promedio ${demo.avg_bmi}.` : ''}
           {s?.total_records_processed ? ` Registros procesados: ${formatNumber(s.total_records_processed)} con calidad del ${s.average_quality_score}%.` : ''}</p>
         </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle className="text-base">Ver datos originales</CardTitle>
+          <div className="flex items-center gap-2">
+            <select
+              className="border rounded px-2 py-1 text-sm"
+              value={selectedSourceId ?? ''}
+              onChange={e => {
+                const v = e.target.value;
+                if (v) handleViewRaw(Number(v));
+              }}
+            >
+              <option value="">Seleccionar fuente...</option>
+              {dataSources.map((ds: any) => (
+                <option key={ds.id} value={ds.id}>{ds.name}</option>
+              ))}
+            </select>
+          </div>
+        </CardHeader>
+        {showRawData && rawData && (
+          <CardContent className="overflow-auto max-h-[500px]">
+            {rawLoading ? (
+              <div className="flex justify-center py-4">
+                <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+              </div>
+            ) : (
+              <>
+                <p className="text-xs text-muted-foreground mb-2">
+                  {rawData.source_name} — {rawData.total} filas, mostrando {rawData.page * rawData.max_rows + 1} a {Math.min((rawData.page + 1) * rawData.max_rows, rawData.total)}
+                </p>
+                <table className="w-full text-xs border-collapse">
+                  <thead>
+                    <tr className="bg-muted">
+                      {rawData.columns.map((col, i) => (
+                        <th key={i} className="border px-2 py-1 text-left font-medium whitespace-nowrap">{col}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {rawData.rows.map((row, ri) => (
+                      <tr key={ri} className={ri % 2 === 0 ? 'bg-background' : 'bg-muted/30'}>
+                        {row.map((cell, ci) => (
+                          <td key={ci} className="border px-2 py-1 whitespace-nowrap">{cell ?? '—'}</td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {rawData.total_pages > 1 && (
+                  <div className="flex items-center justify-center gap-2 mt-3">
+                    <Button variant="outline" size="sm" disabled={rawPage <= 0} onClick={() => fetchRawData(selectedSourceId!, rawPage - 1)}>
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    <span className="text-xs">Pág. {rawPage + 1} de {rawData.total_pages}</span>
+                    <Button variant="outline" size="sm" disabled={rawPage >= rawData.total_pages - 1} onClick={() => fetchRawData(selectedSourceId!, rawPage + 1)}>
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                )}
+              </>
+            )}
+          </CardContent>
+        )}
       </Card>
     </div>
   );

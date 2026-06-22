@@ -1,7 +1,9 @@
 import io
+import os
 import csv
 import json
 import logging
+import tempfile
 from datetime import datetime, timedelta
 from django.db.models import Count, Avg, Sum
 from django.http import HttpResponse
@@ -184,3 +186,75 @@ def export_report(request, report_type):
         return response
 
     return Response({'success': False, 'error': 'Formato no soportado'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def raw_data(request, source_id):
+    if not check_reports_access(request):
+        return Response(
+            {'success': False, 'error': 'No tienes permiso para acceder a reportes'},
+            status=status.HTTP_403_FORBIDDEN
+        )
+    from apps.etl.models import DataSource
+    import pandas as pd
+
+    try:
+        source = DataSource.objects.get(id=source_id)
+    except DataSource.DoesNotExist:
+        return Response({'success': False, 'error': 'Fuente de datos no encontrada'}, status=status.HTTP_404_NOT_FOUND)
+
+    if not source.file_content:
+        return Response({'success': False, 'error': 'La fuente de datos no tiene contenido almacenado'}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        ext = os.path.splitext(source.file_content_name or source.original_filename or 'datos.xlsx')[1].lower()
+        with tempfile.NamedTemporaryFile(delete=False, suffix=ext) as tmp:
+            tmp.write(source.file_content)
+            tmp_path = tmp.name
+
+        if ext in ['.xlsx']:
+            df = pd.read_excel(tmp_path, engine='openpyxl')
+        elif ext in ['.xls']:
+            df = pd.read_excel(tmp_path, engine='xlrd')
+        elif ext == '.csv':
+            from etl_engine.extractor import _read_csv_with_fallback
+            df = _read_csv_with_fallback(tmp_path)
+        else:
+            df = pd.read_excel(tmp_path, engine='openpyxl')
+
+        os.unlink(tmp_path)
+
+        max_rows = int(request.query_params.get('max_rows', 200))
+        page = int(request.query_params.get('page', 0))
+        start = page * max_rows
+        end = start + max_rows
+        total = len(df)
+        page_df = df.iloc[start:end]
+
+        columns = [str(c) for c in page_df.columns.tolist()]
+        rows = []
+        for _, row in page_df.iterrows():
+            rows.append([None if pd.isna(v) else (v if isinstance(v, (str, int, float, bool)) else str(v)) for v in row])
+
+        log_audit(request.user, 'read', 'reports', resource_type='datasource',
+                  resource_id=source.id,
+                  description=f"Datos originales consultados: {source.name} ({total} filas)",
+                  request=request)
+
+        return Response({
+            'success': True,
+            'data': {
+                'source_name': source.name,
+                'source_type': source.source_type,
+                'columns': columns,
+                'rows': rows,
+                'total': total,
+                'page': page,
+                'max_rows': max_rows,
+                'total_pages': (total + max_rows - 1) // max_rows,
+            }
+        })
+    except Exception as e:
+        return Response({'success': False, 'error': f'Error al leer datos originales: {str(e)}'},
+                        status=status.HTTP_500_INTERNAL_SERVER_ERROR)

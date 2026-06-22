@@ -183,6 +183,40 @@ class Transformer(BaseETLComponent):
 
         return df
 
+    @staticmethod
+    def _infer_gender_from_name(name):
+        if pd.isna(name) or not str(name).strip():
+            return None
+        first = str(name).strip().split()[0].lower()
+        if first.endswith(('a', 'ita', 'ina', 'ona', 'ora', 'iana', 'ela')):
+            return 'F'
+        if first.endswith(('o', 'io', 'ito', 'ino', 'ero', 'oro')):
+            return 'M'
+        male_names = {'jose', 'josé', 'luis', 'carlos', 'manuel', 'david', 'juan', 'jorge',
+            'pedro', 'rafael', 'fernando', 'andres', 'andrés', 'alvaro', 'álvaro', 'santiago',
+            'felipe', 'sebastian', 'sebastián', 'nicolas', 'nicolás', 'diego', 'javier',
+            'miguel', 'angel', 'ángel', 'ramon', 'ramón', 'simon', 'simón', 'tomas', 'tomás',
+            'julian', 'julián', 'martin', 'martín', 'pablo', 'adrian', 'adrián', 'daniel',
+            'benjamin', 'benjamín', 'vicente', 'esteban', 'mateo', 'matias', 'matías',
+            'francisco', 'jesus', 'jesús', 'cristian', 'cristhian', 'kevin', 'brandon',
+            'brayan', 'bryan', 'jhon', 'jhonatan', 'jonathan', 'jonatan', 'ismael',
+            'samuel', 'moises', 'moisés', 'elias', 'elías', 'isaac', 'noe', 'noé',
+            'alan', 'ivan', 'ivan', 'edwin', 'wilson', 'wilmer', 'oswaldo', 'rodolfo',
+            'nelson', 'hector', 'héctor', 'leonardo', 'guillermo', 'hernando', 'ricardo',
+            'eduardo', 'alfonso', 'alfredo', 'rodrigo', 'camilo', 'mauricio', 'octavio'}
+        if first in male_names:
+            return 'M'
+        female_names = {'raquel', 'ester', 'esther', 'yolanda', 'amparo', 'consuelo',
+            'mercedes', 'montserrat', 'carmen', 'milagros', 'pilar', 'socorro', 'nieves',
+            'luz', 'virtudes', 'dolores', 'asunción', 'asuncion', 'concepción', 'concepcion',
+            'angustias', 'esperanza', 'encarnación', 'encarnacion', 'noemi', 'noemí',
+            'nayibe', 'yaritza', 'yenifer', 'yessica', 'yuliana', 'paulina', 'camila',
+            'valentina', 'laura', 'maria', 'maría', 'ana', 'gabriela', 'fernanda',
+            'ximena', 'jimena', 'carolina', 'daniela', 'tatiana', 'katherine', 'johanna'}
+        if first in female_names:
+            return 'F'
+        return None
+
     def _normalize_gender(self, df):
         if 'gender' in df.columns:
             gender_map = {
@@ -191,6 +225,15 @@ class Transformer(BaseETLComponent):
                 'o': 'O', 'otro': 'O', 'other': 'O',
             }
             df['gender'] = df['gender'].astype(str).str.lower().str.strip().map(gender_map).fillna('O')
+
+            if 'first_name' in df.columns:
+                name_genders = df['first_name'].apply(self._infer_gender_from_name)
+                conflicts = (df['gender'] != name_genders) & name_genders.notna()
+                fix_count = conflicts.sum()
+                if fix_count > 0:
+                    df.loc[conflicts, 'gender'] = name_genders[conflicts]
+                    self.stats['errors_corrected'] += fix_count
+                    self.log('info', f"Corregidos {fix_count} géneros inconsistentes basados en el nombre", 'TRANSFORM')
         return df
 
     def _normalize_diagnosis(self, df):
