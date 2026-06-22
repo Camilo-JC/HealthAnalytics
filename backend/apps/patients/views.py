@@ -44,7 +44,7 @@ class PatientViewSet(viewsets.ModelViewSet):
         'document_number', 'diagnosis', 'diagnosis_code'
     ]
     ordering_fields = '__all__'
-    ordering = ['-created_at']
+    ordering = ['patient_id']
 
     def get_serializer_class(self):
         if self.action == 'create':
