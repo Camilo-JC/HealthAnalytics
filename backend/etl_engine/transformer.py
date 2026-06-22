@@ -560,6 +560,22 @@ class Transformer(BaseETLComponent):
                     conditions['Hypercholesterolemia'] = ''
             return conditions
 
+        def _has_condition(diag_text, condition_name):
+            d = str(diag_text).lower()
+            variants = {
+                'hypertension': ['hipertension', 'hipertensión', 'hipertensíon', 'hipertencion', 'hta', 'presion alta'],
+                'diabetes mellitus': ['diabetes', 'dm', 'dm2'],
+                'obesity': ['obesidad', 'obeso', 'obesa'],
+                'morbid obesity': ['obesidad morbida', 'obesidad mórbida', 'obesidad grado iii', 'obesidad iii'],
+                'hypercholesterolemia': ['colesterol', 'hipercolesterolemia', 'colesterol alto'],
+            }
+            name_lower = condition_name.lower()
+            if name_lower in variants:
+                for v in variants[name_lower]:
+                    if v in d:
+                        return True
+            return name_lower in d
+
         def assign(row):
             diag = row.get('diagnosis')
             code = row.get('diagnosis_code')
@@ -568,12 +584,9 @@ class Transformer(BaseETLComponent):
                 return diag, code
 
             is_healthy = self._is_healthy_diagnosis(diag)
-            existing = set()
-            if pd.notna(diag):
-                for part in str(diag).split(','):
-                    existing.add(part.strip().lower())
+            diag_text = str(diag) if pd.notna(diag) else ''
 
-            missing = {k: v for k, v in conditions.items() if k.lower() not in existing}
+            missing = {k: v for k, v in conditions.items() if not _has_condition(diag_text, k)}
 
             if not missing:
                 return diag, code
@@ -582,8 +595,10 @@ class Transformer(BaseETLComponent):
                 result_diag = ', '.join(missing.keys())
                 result_code = ', '.join(v for v in missing.values() if v)
             else:
-                result_diag = str(diag) + ', ' + ', '.join(missing.keys())
-                result_code = str(code) + ', ' + ', '.join(v for v in missing.values() if v) if pd.notna(code) else ', '.join(v for v in missing.values() if v)
+                result_diag = diag_text + ', ' + ', '.join(missing.keys())
+                existing_codes = set(str(code).split(', ')) if pd.notna(code) else set()
+                new_codes = [v for v in missing.values() if v and v not in existing_codes]
+                result_code = (str(code) + ', ' + ', '.join(new_codes)) if new_codes else code
 
             return result_diag, result_code
 
