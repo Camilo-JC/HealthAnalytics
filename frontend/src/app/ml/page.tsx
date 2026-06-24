@@ -98,7 +98,7 @@ function MLContent() {
                 <XAxis dataKey="name" />
                 <YAxis domain={[0, 100]} tickFormatter={(v) => `${v}%`} />
                 <Tooltip formatter={(v: number) => `${v}%`} />
-                <Legend />
+                <Legend formatter={(value) => ({ Accuracy: 'Exactitud', Precision: 'Precisión', Recall: 'Sensibilidad', F1: 'F1' }[value] || value)} />
                 <Bar dataKey="Accuracy" fill="#22c55e" radius={[4, 4, 0, 0]} />
                 <Bar dataKey="Precision" fill="#3b82f6" radius={[4, 4, 0, 0]} />
                 <Bar dataKey="Recall" fill="#eab308" radius={[4, 4, 0, 0]} />
@@ -122,7 +122,7 @@ function MLContent() {
                   </div>
                   <div className="flex items-center gap-2">
                     {m.is_active && <Badge className="bg-green-100 text-green-800">Activo</Badge>}
-                    <span className="text-xs text-muted-foreground">Acc: {m.accuracy ? `${(m.accuracy * 100).toFixed(1)}%` : '—'}</span>
+                    <span className="text-xs text-muted-foreground">Exactitud: {m.accuracy ? `${(m.accuracy * 100).toFixed(1)}%` : '—'}</span>
                   </div>
                 </div>
               ))}

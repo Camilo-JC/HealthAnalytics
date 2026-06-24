@@ -127,7 +127,7 @@ function PatientsContent() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = 'patients.csv';
+      a.download = 'pacientes.csv';
       a.click();
       URL.revokeObjectURL(url);
     } catch (err: unknown) {

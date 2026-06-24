@@ -410,7 +410,7 @@ class Transformer(BaseETLComponent):
             risk_score = 0
             lifestyle_score = 0
 
-            if _check_condition(row.get('systolic_bp'), '>', 140):
+            if _check_condition(row.get('systolic_bp'), '>=', 180):
                 risk_score += 20
             elif _check_condition(row.get('systolic_bp'), '>=', 130):
                 risk_score += 15
@@ -490,7 +490,7 @@ class Transformer(BaseETLComponent):
                 return 'critical', round(total_score, 2)
 
             for param, op, threshold, _ in [
-                ('systolic_bp', '>=', 140, None),
+                ('systolic_bp', '>=', 130, None),
                 ('diastolic_bp', '>=', 90, None),
                 ('glucose', '>=', 126, None),
                 ('bmi', '>=', 35, None),
@@ -541,9 +541,9 @@ class Transformer(BaseETLComponent):
             if pd.notna(row.get('systolic_bp')):
                 sbp = float(row['systolic_bp'])
                 dbp = float(row['diastolic_bp']) if pd.notna(row.get('diastolic_bp')) else 0
-                if sbp >= 140 or dbp >= 90:
+                if sbp >= 130 or dbp >= 90:
                     conditions['Hypertension'] = 'I10'
-                elif sbp >= 130 or dbp >= 80:
+                elif sbp >= 120 or dbp >= 80:
                     conditions['Hypertension'] = 'I10'
             if pd.notna(row.get('glucose')):
                 glu = float(row['glucose'])

@@ -47,6 +47,13 @@ export function getSeverityColor(severity: string): string {
   return colors[severity] || 'bg-gray-100 text-gray-800';
 }
 
+export function getSeverityLabel(severity: string): string {
+  const labels: Record<string, string> = {
+    info: 'Informativo', warning: 'Advertencia', critical: 'Crítico',
+  };
+  return labels[severity] || severity;
+}
+
 export function translateGender(gender: string): string {
   return gender === 'M' ? 'Masculino' : gender === 'F' ? 'Femenino' : 'Otro';
 }

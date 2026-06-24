@@ -38,10 +38,9 @@ CLINICAL_ALERT_RULES = [
 ]
 
 BP_CLASSIFICATION = {
-    'normal': {'systolic': (None, 120), 'diastolic': (None, 80)},
-    'elevated': {'systolic': (120, 130), 'diastolic': (None, 80)},
-    'hypertension_stage_1': {'systolic': (130, 140), 'diastolic': (80, 90)},
-    'hypertension_stage_2': {'systolic': (140, None), 'diastolic': (90, None)},
+    'low': {'systolic': (None, 80), 'diastolic': (None, 60)},
+    'normal': {'systolic': (90, 120), 'diastolic': (60, 80)},
+    'high': {'systolic': (130, 179), 'diastolic': (90, 119)},
     'crisis': {'systolic': (180, None), 'diastolic': (120, None)},
 }
 
@@ -93,7 +92,7 @@ RISK_CRITICAL_CONDITIONS = [
 ]
 
 RISK_HIGH_CONDITIONS = [
-    ('systolic_bp', '>=', 140, 'hypertension_stage_2'),
+    ('systolic_bp', '>=', 130, 'high_bp'),
     ('diastolic_bp', '>=', 90, 'hypertension_stage_2'),
     ('glucose', '>=', 126, 'diabetes'),
     ('bmi', '>=', 35, 'obesity_grade_ii'),

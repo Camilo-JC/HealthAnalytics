@@ -8,7 +8,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { apiRequest } from '@/lib/api';
-import { getRiskColor, getRiskLabel, getSeverityColor, formatDate, translateGender } from '@/lib/utils';
+import { getRiskColor, getRiskLabel, getSeverityColor, getSeverityLabel, formatDate, translateGender } from '@/lib/utils';
 import { ArrowLeft, AlertTriangle, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
@@ -126,7 +126,7 @@ function PatientDetailContent() {
             <div className="flex justify-between"><span className="text-muted-foreground">Diagnóstico</span><span className="font-medium text-right max-w-[60%]">{patient.diagnosis}</span></div>
             <div className="flex justify-between"><span className="text-muted-foreground">Código</span><span className="font-medium">{patient.diagnosis_code || '—'}</span></div>
             <div className="flex justify-between"><span className="text-muted-foreground">Riesgo</span><Badge className={getRiskColor(patient.risk_category)}>{getRiskLabel(patient.risk_category)}</Badge></div>
-            <div className="flex justify-between"><span className="text-muted-foreground">Score</span><span className="font-medium">{patient.risk_score != null ? `${Number(patient.risk_score).toFixed(1)}%` : '—'}</span></div>
+            <div className="flex justify-between"><span className="text-muted-foreground">Puntaje</span><span className="font-medium">{patient.risk_score != null ? `${Number(patient.risk_score).toFixed(1)}%` : '—'}</span></div>
           </CardContent>
         </Card>
 
@@ -147,7 +147,7 @@ function PatientDetailContent() {
           <CardContent className="space-y-2">
             {alerts.map(a => (
               <div key={a.id} className="flex items-center gap-3 rounded-lg border p-3 text-sm">
-                <Badge className={getSeverityColor(a.severity)}>{a.severity}</Badge>
+                <Badge className={getSeverityColor(a.severity)}>{getSeverityLabel(a.severity)}</Badge>
                 <div className="flex-1"><p className="font-medium">{a.alert_type}</p><p className="text-xs text-muted-foreground">{a.description}</p></div>
                 <span className="text-xs text-muted-foreground">{formatDate(a.created_at)}</span>
               </div>

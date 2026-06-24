@@ -83,9 +83,9 @@ class PatientViewSet(viewsets.ModelViewSet):
         if patient.systolic_bp:
             sbp = float(patient.systolic_bp)
             dbp = float(patient.diastolic_bp) if patient.diastolic_bp else 0
-            if sbp >= 140 or dbp >= 90:
+            if sbp >= 130 or dbp >= 90:
                 conditions['Hypertension'] = 'I10'
-            elif sbp >= 130 or dbp >= 80:
+            elif sbp >= 120 or dbp >= 80:
                 conditions['Hypertension'] = 'I10'
         if patient.glucose:
             glu = float(patient.glucose)
@@ -170,8 +170,7 @@ class PatientViewSet(viewsets.ModelViewSet):
                 elif float(patient.bmi) >= 25: score += 2
             if patient.systolic_bp:
                 if patient.systolic_bp >= 180: score += 20
-                elif patient.systolic_bp >= 140: score += 15
-                elif patient.systolic_bp >= 130: score += 10
+                elif patient.systolic_bp >= 130: score += 15
                 elif patient.systolic_bp >= 120: score += 5
             if patient.glucose:
                 g = float(patient.glucose)

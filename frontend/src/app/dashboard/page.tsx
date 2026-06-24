@@ -200,7 +200,7 @@ function DashboardContent() {
               {alerts.map((a) => (
                 <div key={a.id} className="flex items-center gap-3 rounded-lg border p-3 text-sm">
                   <Badge className={getSeverityColor(a.severity)}>
-                    {a.severity === 'critical' ? 'Crítico' : a.severity === 'warning' ? 'Advertencia' : 'Info'}
+                    {a.severity === 'critical' ? 'Crítico' : a.severity === 'warning' ? 'Advertencia' : 'Informativo'}
                   </Badge>
                   <div className="flex-1 min-w-0">
                     <p className="font-medium truncate">{a.alert_type}</p>
