@@ -102,6 +102,7 @@ class Transformer(BaseETLComponent):
         df = self._normalize_columns(df)
         df = self._remove_duplicates(df)
         df = self._clean_string_fields(df)
+        df = self._normalize_text_bp(df)
         df = self._convert_data_types(df)
         df = self._normalize_gender(df)
         df = self._normalize_diagnosis(df)
@@ -142,6 +143,20 @@ class Transformer(BaseETLComponent):
             if field in df.columns:
                 df[field] = df[field].astype(str).str.strip().str.title()
                 df[field] = df[field].replace(['Nan', 'N/A', 'None', 'Null', '', ' '], np.nan)
+        return df
+
+    def _normalize_text_bp(self, df):
+        bp_text_map = {
+            'alta': 150, 'baja': 70, 'normal': 110,
+        }
+        for col in ['systolic_bp', 'diastolic_bp']:
+            if col in df.columns:
+                lower_vals = df[col].astype(str).str.lower().str.strip()
+                for text_val, numeric_val in bp_text_map.items():
+                    mask = lower_vals == text_val
+                    if mask.any():
+                        df.loc[mask, col] = numeric_val
+                        self.stats['errors_corrected'] += mask.sum()
         return df
 
     def _convert_data_types(self, df):
