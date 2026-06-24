@@ -78,14 +78,14 @@ class PatientViewSet(viewsets.ModelViewSet):
             if not has_module_permission(request.user, 'patients_manage'):
                 self.permission_denied(request, message='No tienes permiso para crear o modificar pacientes')
 
+    DETECTABLE = {'Hypertension', 'Diabetes Mellitus', 'Obesity', 'Morbid Obesity', 'Hypercholesterolemia'}
+
     def _detect_conditions(self, patient):
         conditions = {}
         if patient.systolic_bp:
             sbp = float(patient.systolic_bp)
             dbp = float(patient.diastolic_bp) if patient.diastolic_bp else 0
             if sbp >= 130 or dbp >= 90:
-                conditions['Hypertension'] = 'I10'
-            elif sbp >= 120 or dbp >= 80:
                 conditions['Hypertension'] = 'I10'
         if patient.glucose:
             glu = float(patient.glucose)
@@ -105,47 +105,21 @@ class PatientViewSet(viewsets.ModelViewSet):
                 conditions['Hypercholesterolemia'] = ''
         return conditions
 
-    def _has_condition_variant(self, diag_text, condition_name):
-        d = str(diag_text).lower()
-        variants = {
-            'hypertension': ['hipertension', 'hipertensión', 'hipertensíon', 'hipertencion', 'hta', 'presion alta'],
-            'diabetes mellitus': ['diabetes', 'dm', 'dm2'],
-            'obesity': ['obesidad', 'obeso', 'obesa'],
-            'morbid obesity': ['obesidad morbida', 'obesidad mórbida', 'obesidad grado iii', 'obesidad iii'],
-            'hypercholesterolemia': ['colesterol', 'hipercolesterolemia', 'colesterol alto'],
-        }
-        name_lower = condition_name.lower()
-        if name_lower in variants:
-            for v in variants[name_lower]:
-                if v in d:
-                    return True
-        return name_lower in d
-
     def _assign_clinical_diagnosis(self, patient):
         diag = patient.diagnosis or ''
         code = patient.diagnosis_code or ''
-        conditions = self._detect_conditions(patient)
-        if not conditions:
-            if not diag.strip() or diag.strip().lower() in ('sano', 'sana', 'saludable', 'healthy', 'ninguno', 'ninguna', 'none', 'sin diagnostico', 'sin diagnóstico', 'normal', 'bueno', 'buena', 'excelente'):
-                patient.diagnosis = 'Sano'
-                patient.diagnosis_code = ''
-            return
-
-        is_healthy = not diag.strip() or any(k in diag.strip().lower() for k in ['sano', 'sana', 'saludable', 'healthy', 'ninguno', 'ninguna', 'none', 'sin diagnostico', 'sin diagnóstico', 'normal', 'bueno', 'buena', 'excelente'])
-        missing = {k: v for k, v in conditions.items() if not self._has_condition_variant(diag, k)}
-
-        if not missing:
-            return
-
-        if is_healthy:
-            patient.diagnosis = ', '.join(missing.keys())
-            patient.diagnosis_code = ', '.join(v for v in missing.values() if v)
+        detected = self._detect_conditions(patient)
+        orig_parts = [p.strip() for p in diag.split(',')] if diag.strip() else []
+        preserved = [p for p in orig_parts if p not in self.DETECTABLE]
+        new_parts = list(detected.keys())
+        new_parts.extend(p for p in preserved if p not in new_parts)
+        if not new_parts:
+            patient.diagnosis = 'Sano'
+            patient.diagnosis_code = ''
         else:
-            existing_codes = set(code.split(', ')) if code else set()
-            new_codes = [v for v in missing.values() if v and v not in existing_codes]
-            sep = ', ' if code else ''
-            patient.diagnosis = diag + ', ' + ', '.join(missing.keys())
-            patient.diagnosis_code = (code + sep + ', '.join(new_codes)) if new_codes else code
+            patient.diagnosis = ', '.join(new_parts)
+            new_codes = [v for v in detected.values() if v]
+            patient.diagnosis_code = ', '.join(new_codes)
 
     def perform_create(self, serializer):
         patient = serializer.save()

@@ -531,6 +531,7 @@ class Transformer(BaseETLComponent):
         return any(k in d for k in keywords)
 
     def _assign_clinical_diagnosis(self, df):
+        DETECTABLE_CONDITIONS = {'Hypertension', 'Diabetes Mellitus', 'Obesity', 'Morbid Obesity', 'Hypercholesterolemia'}
         if 'diagnosis' not in df.columns:
             df['diagnosis'] = np.nan
         if 'diagnosis_code' not in df.columns:
@@ -542,8 +543,6 @@ class Transformer(BaseETLComponent):
                 sbp = float(row['systolic_bp'])
                 dbp = float(row['diastolic_bp']) if pd.notna(row.get('diastolic_bp')) else 0
                 if sbp >= 130 or dbp >= 90:
-                    conditions['Hypertension'] = 'I10'
-                elif sbp >= 120 or dbp >= 80:
                     conditions['Hypertension'] = 'I10'
             if pd.notna(row.get('glucose')):
                 glu = float(row['glucose'])
@@ -582,34 +581,15 @@ class Transformer(BaseETLComponent):
         def assign(row):
             diag = row.get('diagnosis')
             code = row.get('diagnosis_code')
-            conditions = detect_conditions(row)
-            if not conditions:
-                if pd.isna(diag) or self._is_healthy_diagnosis(diag):
-                    return 'Sano', ''
-                return diag, code
-
-            is_healthy = self._is_healthy_diagnosis(diag)
-            diag_text = str(diag) if pd.notna(diag) else ''
-
-            missing = {k: v for k, v in conditions.items() if not _has_condition(diag_text, k)}
-
-            if not missing:
-                return diag, code
-
-            if is_healthy:
-                result_diag = ', '.join(missing.keys())
-                result_code = ', '.join(v for v in missing.values() if v)
-            else:
-                result_diag = diag_text + ', ' + ', '.join(missing.keys())
-                existing_codes = set(c for c in str(code).split(', ') if c) if pd.notna(code) else set()
-                new_codes = [v for v in missing.values() if v and v not in existing_codes]
-                if new_codes:
-                    sep = ', ' if str(code).strip() else ''
-                    result_code = str(code) + sep + ', '.join(new_codes)
-                else:
-                    result_code = code
-
-            return result_diag, result_code
+            detected = detect_conditions(row)
+            orig_parts = [p.strip() for p in str(diag).split(',')] if pd.notna(diag) and str(diag).strip() else []
+            preserved = [p for p in orig_parts if p not in DETECTABLE_CONDITIONS and not _has_condition(str(p), p)]
+            new_diag_parts = list(detected.keys())
+            new_diag_parts.extend(p for p in preserved if p not in new_diag_parts)
+            if not new_diag_parts:
+                return 'Sano', ''
+            new_codes = [v for v in detected.values() if v]
+            return ', '.join(new_diag_parts), ', '.join(new_codes)
 
         result = df.apply(assign, axis=1, result_type='expand')
         df['diagnosis'] = result[0]
