@@ -33,7 +33,6 @@ function ETLContent() {
   const [executions, setExecutions] = useState<ETLExecution[]>([]);
   const [sources, setSources] = useState<DataSource[]>([]);
   const [uploading, setUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
   const [executing, setExecuting] = useState(false);
   const [executingId, setExecutingId] = useState<number | null>(null);
   const [execPhase, setExecPhase] = useState<string>('');
@@ -85,11 +84,10 @@ function ETLContent() {
     const file = e.target.files?.[0];
     if (!file) return;
     setUploading(true);
-    setUploadProgress(0);
     try {
       await uploadFileWithProgress('/etl/sources/upload/', file,
         { name: file.name, source_type: file.name.endsWith('.csv') ? 'csv' : 'excel' },
-        (pct) => setUploadProgress(pct),
+        () => {},
       );
       toast.success('Archivo subido exitosamente');
       loadData();
@@ -97,7 +95,6 @@ function ETLContent() {
       toast.error(err instanceof Error ? err.message : 'Error al subir archivo');
     } finally {
       setUploading(false);
-      setUploadProgress(0);
       e.target.value = '';
     }
   };
@@ -161,12 +158,6 @@ function ETLContent() {
                 <input type="file" className="hidden" accept=".xlsx,.xls,.csv" onChange={handleUpload} disabled={uploading} />
               </label>
             </div>
-            {uploading && (
-              <div className="space-y-1">
-                <Progress value={uploadProgress} />
-                <p className="text-xs text-muted-foreground">{uploadProgress}%</p>
-              </div>
-            )}
           </CardContent>
         </Card>
       )}
