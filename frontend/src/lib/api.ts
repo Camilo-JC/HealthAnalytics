@@ -110,42 +110,38 @@ export async function getProfile() {
   return apiRequest<{ success: boolean; data: { role: string; email: string; full_name: string } }>('/auth/profile/');
 }
 
-export async function uploadFile(endpoint: string, file: File, extraFields?: Record<string, string>) {
+export async function uploadFileWithProgress(
+  endpoint: string, file: File, extraFields: Record<string, string> | undefined,
+  onProgress: (pct: number) => void,
+): Promise<any> {
   const { access } = getTokens();
   const formData = new FormData();
   formData.append('file', file);
   if (extraFields) Object.entries(extraFields).forEach(([k, v]) => formData.append(k, v));
 
-  let res = await fetch(`${API_BASE}${endpoint}`, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${access}` },
-    body: formData,
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', `${API_BASE}${endpoint}`);
+
+    xhr.setRequestHeader('Authorization', `Bearer ${access}`);
+
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100));
+    };
+
+    xhr.onload = () => {
+      if (xhr.status === 401) {
+        reject(new Error('Sesión expirada'));
+        return;
+      }
+      try {
+        const data = JSON.parse(xhr.responseText);
+        if (xhr.status >= 400) reject(new Error(data.error || `Error ${xhr.status}`));
+        else resolve(data);
+      } catch { reject(new Error(`Error ${xhr.status}`)); }
+    };
+
+    xhr.onerror = () => reject(new Error('Error de red'));
+    xhr.send(formData);
   });
-
-  if (res.status === 401) {
-    const refreshed = await refreshToken();
-    if (refreshed) {
-      const { access: newAccess } = getTokens();
-      res = await fetch(`${API_BASE}${endpoint}`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${newAccess}` },
-        body: formData,
-      });
-    } else {
-      clearTokens();
-      window.location.href = '/login';
-      throw new Error('Sesión expirada');
-    }
-  }
-
-  if (!res.ok) {
-    try {
-      const err = await res.json();
-      throw new Error(err.error || `Error ${res.status}`);
-    } catch (e: unknown) {
-      if (e instanceof TypeError) throw new Error(`Error ${res.status}`);
-      throw e;
-    }
-  }
-  return res.json();
 }

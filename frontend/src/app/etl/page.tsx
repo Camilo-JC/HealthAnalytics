@@ -1,14 +1,15 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { AuthProvider, useAuth } from '@/hooks/use-auth';
 import { AppLayout } from '@/components/layout/app-layout';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { apiRequest, uploadFile } from '@/lib/api';
+import { Progress } from '@/components/ui/progress';
+import { apiRequest, uploadFileWithProgress } from '@/lib/api';
 import { formatDate, formatNumber } from '@/lib/utils';
-import { Upload, Play, Trash2, CheckCircle, XCircle, Clock, AlertCircle } from 'lucide-react';
+import { Upload, Play, Trash2, CheckCircle, XCircle, Clock, AlertCircle, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { ETLExecution, DataSource } from '@/types';
 
@@ -22,12 +23,21 @@ const statusConfig: Record<string, { label: string; class: string; icon: typeof 
   loading: { label: 'Cargando', class: 'bg-blue-100 text-blue-800', icon: Clock },
 };
 
+const phaseOrder = ['pending', 'extracting', 'transforming', 'loading', 'completed'];
+const phaseProgress: Record<string, number> = {
+  pending: 10, extracting: 30, transforming: 55, loading: 80, completed: 100, failed: 100,
+};
+
 function ETLContent() {
   const { hasPermission } = useAuth();
   const [executions, setExecutions] = useState<ETLExecution[]>([]);
   const [sources, setSources] = useState<DataSource[]>([]);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [executing, setExecuting] = useState(false);
+  const [executingId, setExecutingId] = useState<number | null>(null);
+  const [execPhase, setExecPhase] = useState<string>('');
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const loadData = () => {
     apiRequest<{ success: boolean; results: ETLExecution[] }>('/etl/executions/history/')
@@ -38,18 +48,56 @@ function ETLContent() {
 
   useEffect(() => { loadData(); }, []);
 
+  useEffect(() => {
+    return () => { if (pollRef.current) clearInterval(pollRef.current); };
+  }, []);
+
+  const startPolling = (execId: number) => {
+    if (pollRef.current) clearInterval(pollRef.current);
+    setExecutingId(execId);
+    setExecPhase('pending');
+    pollRef.current = setInterval(async () => {
+      try {
+        const res = await apiRequest<{ success: boolean; data: ETLExecution }>(`/etl/executions/${execId}/`);
+        const exec = res.data || res;
+        setExecPhase(exec.status);
+        if (exec.status === 'completed' || exec.status === 'failed') {
+          if (pollRef.current) clearInterval(pollRef.current);
+          pollRef.current = null;
+          setExecuting(false);
+          setExecutingId(null);
+          setExecPhase('');
+          loadData();
+          if (exec.status === 'completed') toast.success('ETL completado exitosamente');
+          else toast.error(`ETL fallido: ${exec.error_message || 'Error desconocido'}`);
+        }
+      } catch {
+        if (pollRef.current) clearInterval(pollRef.current);
+        pollRef.current = null;
+        setExecuting(false);
+        setExecutingId(null);
+        setExecPhase('');
+      }
+    }, 2000);
+  };
+
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setUploading(true);
+    setUploadProgress(0);
     try {
-      const res = await uploadFile('/etl/sources/upload/', file, { name: file.name, source_type: file.name.endsWith('.csv') ? 'csv' : 'excel' });
+      await uploadFileWithProgress('/etl/sources/upload/', file,
+        { name: file.name, source_type: file.name.endsWith('.csv') ? 'csv' : 'excel' },
+        (pct) => setUploadProgress(pct),
+      );
       toast.success('Archivo subido exitosamente');
       loadData();
     } catch (err: unknown) {
       toast.error(err instanceof Error ? err.message : 'Error al subir archivo');
     } finally {
       setUploading(false);
+      setUploadProgress(0);
       e.target.value = '';
     }
   };
@@ -57,13 +105,15 @@ function ETLContent() {
   const handleExecute = async (sourceId: number) => {
     setExecuting(true);
     try {
-      await apiRequest('/etl/executions/execute/', { method: 'POST', body: JSON.stringify({ source_id: sourceId, run_async: false }) });
-      toast.success('ETL ejecutado exitosamente');
-      loadData();
+      const res = await apiRequest<{ success: boolean; execution_id: number }>('/etl/executions/execute/', {
+        method: 'POST',
+        body: JSON.stringify({ source_id: sourceId, run_async: true }),
+      });
+      if (res.execution_id) startPolling(res.execution_id);
+      else { setExecuting(false); toast.error('Error al iniciar ejecución'); }
     } catch (err: unknown) {
-      toast.error(err instanceof Error ? err.message : 'Error al ejecutar ETL');
-    } finally {
       setExecuting(false);
+      toast.error(err instanceof Error ? err.message : 'Error al ejecutar ETL');
     }
   };
 
@@ -89,6 +139,8 @@ function ETLContent() {
     }
   };
 
+  const currentPhase = execPhase || '';
+
   return (
     <div className="page-container">
       <div className="page-header">
@@ -101,7 +153,7 @@ function ETLContent() {
       {hasPermission('etl_execute') && (
         <Card>
           <CardHeader><CardTitle className="text-base">Subir Archivo</CardTitle></CardHeader>
-          <CardContent>
+          <CardContent className="space-y-3">
             <div className="flex items-center gap-4">
               <label className="flex cursor-pointer items-center gap-2 rounded-lg border-2 border-dashed px-6 py-4 text-sm text-muted-foreground hover:border-primary hover:text-primary transition-colors">
                 <Upload className="h-5 w-5" />
@@ -109,6 +161,12 @@ function ETLContent() {
                 <input type="file" className="hidden" accept=".xlsx,.xls,.csv" onChange={handleUpload} disabled={uploading} />
               </label>
             </div>
+            {uploading && (
+              <div className="space-y-1">
+                <Progress value={uploadProgress} />
+                <p className="text-xs text-muted-foreground">{uploadProgress}%</p>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
@@ -128,7 +186,7 @@ function ETLContent() {
                     <Badge variant="outline">{s.status}</Badge>
                     {hasPermission('etl_execute') && (
                       <Button variant="outline" size="sm" onClick={() => handleExecute(s.id)} disabled={executing}>
-                        <Play className="h-4 w-4" />
+                        {executing && executingId === null ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
                       </Button>
                     )}
                     {hasPermission('etl_delete') && (
@@ -140,6 +198,29 @@ function ETLContent() {
                 </div>
               ))}
             </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {executing && executingId && (
+        <Card>
+          <CardHeader><CardTitle className="text-base flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" />Ejecutando ETL</CardTitle></CardHeader>
+          <CardContent className="space-y-3">
+            <Progress value={phaseProgress[currentPhase] || 10} />
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <span className={currentPhase === 'extracting' ? 'font-medium text-primary' : ''}>Extraer</span>
+              <span className={currentPhase === 'transforming' ? 'font-medium text-primary' : ''}>Transformar</span>
+              <span className={currentPhase === 'loading' ? 'font-medium text-primary' : ''}>Cargar</span>
+              <span className={currentPhase === 'completed' ? 'font-medium text-green-600' : ''}>Completar</span>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {currentPhase === 'extracting' && 'Extrayendo datos del archivo...'}
+              {currentPhase === 'transforming' && 'Transformando y limpiando datos...'}
+              {currentPhase === 'loading' && 'Cargando datos en la base de datos...'}
+              {currentPhase === 'completed' && 'Ejecución completada'}
+              {currentPhase === 'failed' && 'La ejecución falló'}
+              {(!currentPhase || currentPhase === 'pending') && 'Iniciando...'}
+            </p>
           </CardContent>
         </Card>
       )}

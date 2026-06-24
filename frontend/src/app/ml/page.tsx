@@ -98,7 +98,7 @@ function MLContent() {
                 <XAxis dataKey="name" />
                 <YAxis domain={[0, 100]} tickFormatter={(v) => `${v}%`} />
                 <Tooltip formatter={(v: number) => `${v}%`} />
-                <Legend formatter={(value) => ({ Accuracy: 'Exactitud', Precision: 'Precisión', Recall: 'Sensibilidad', F1: 'F1' }[value] || value)} />
+                <Legend formatter={(value: string) => ({ Accuracy: 'Exactitud', Precision: 'Precisión', Recall: 'Sensibilidad', F1: 'F1' } as Record<string, string>)[value] || value} />
                 <Bar dataKey="Accuracy" fill="#22c55e" radius={[4, 4, 0, 0]} />
                 <Bar dataKey="Precision" fill="#3b82f6" radius={[4, 4, 0, 0]} />
                 <Bar dataKey="Recall" fill="#eab308" radius={[4, 4, 0, 0]} />
