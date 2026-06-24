@@ -83,13 +83,15 @@ class DataSourceViewSet(viewsets.ModelViewSet):
             )
         name = request.POST.get('name', f.name)
         source_type = request.POST.get('source_type', 'excel')
+        content = f.read()
+        f.seek(0)
         source = DataSource.objects.create(
             name=name,
             source_type=source_type,
             file=f,
             original_filename=f.name,
             file_size=f.size,
-            file_content=f.read(),
+            file_content=content,
             file_content_name=f.name,
         )
         log_audit(request.user, 'create', 'etl', resource_type='datasource',
@@ -177,11 +179,21 @@ class ETLExecutionViewSet(viewsets.ModelViewSet):
                 'task_id': task.id
             })
         else:
-            import tempfile, os
-            ext = os.path.splitext(source.file_content_name or source.original_filename or 'file.xlsx')[1]
-            with tempfile.NamedTemporaryFile(delete=False, suffix=ext) as tmp:
-                tmp.write(source.file_content or b'')
-                tmp_path = tmp.name
+            if source.file_content:
+                import tempfile, os
+                ext = os.path.splitext(source.file_content_name or source.original_filename or 'file.xlsx')[1]
+                with tempfile.NamedTemporaryFile(delete=False, suffix=ext) as tmp:
+                    tmp.write(source.file_content)
+                    tmp_path = tmp.name
+                cleanup = True
+            elif source.file and os.path.exists(source.file.path):
+                tmp_path = source.file.path
+                cleanup = False
+            else:
+                return Response(
+                    {'success': False, 'error': 'No hay contenido de archivo disponible para ejecutar ETL'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
             from etl_engine.pipeline import ETLPipeline
             pipeline = ETLPipeline(execution_id=execution.id)
             try:
@@ -192,10 +204,11 @@ class ETLExecutionViewSet(viewsets.ModelViewSet):
                     source_name=source.name
                 )
             finally:
-                try:
-                    os.unlink(tmp_path)
-                except Exception:
-                    pass
+                if cleanup:
+                    try:
+                        os.unlink(tmp_path)
+                    except Exception:
+                        pass
             return Response({'success': result['success'], 'data': result})
 
     @action(detail=False, methods=['get'])

@@ -13,14 +13,22 @@ def run_etl_pipeline(self, execution_id):
     try:
         execution = ETLExecution.objects.get(id=execution_id)
         source = execution.source
-
-        if not source.file:
+        import os
+        file_path = None
+        if source.file and os.path.exists(source.file.path):
+            file_path = source.file.path
+        if file_path is None and source.file_content:
+            import tempfile
+            ext = os.path.splitext(source.file_content_name or source.original_filename or 'file.xlsx')[1]
+            with tempfile.NamedTemporaryFile(delete=False, suffix=ext) as tmp:
+                tmp.write(source.file_content)
+                file_path = tmp.name
+        if file_path is None:
             execution.status = 'failed'
             execution.error_message = 'No hay archivo asociado'
             execution.save()
             return {'success': False, 'error': 'No hay archivo asociado'}
 
-        file_path = source.file.path
         pipeline = ETLPipeline(execution_id=execution_id)
         result = pipeline.run(file_path, source.source_type)
 
