@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { apiRequest } from '@/lib/api';
-import { Cpu, Play, BarChart3 } from 'lucide-react';
+import { Cpu, Play, BarChart3, Activity } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import { toast } from 'sonner';
 import type { MLComparison } from '@/types';
@@ -192,6 +192,26 @@ function MLContent() {
                                 }`} style={{ width: `${(prob * 100).toFixed(1)}%` }} />
                               </div>
                               <span className="w-12 text-right text-xs font-medium">{(prob * 100).toFixed(1)}%</span>
+                            </div>
+                          ))}
+                        </div>
+                      </>
+                    );
+                  })()}
+                  {(() => {
+                    const dc = prediction.detected_conditions;
+                    if (!Array.isArray(dc) || dc.length === 0) return null;
+                    return (
+                      <>
+                        <div className="border-t pt-2 mt-2" />
+                        <p className="text-xs text-muted-foreground flex items-center gap-1">
+                          <Activity className="h-3 w-3" /> Condiciones detectadas
+                        </p>
+                        <div className="space-y-1">
+                          {dc.map((c: Record<string, unknown>, i: number) => (
+                            <div key={i} className="flex items-center justify-between text-xs bg-muted/30 rounded px-2 py-1">
+                              <span className="font-medium">{String(c.condition)}</span>
+                              <span className="text-muted-foreground">{c.code ? String(c.code) : ''}</span>
                             </div>
                           ))}
                         </div>

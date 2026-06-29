@@ -315,6 +315,26 @@ class MLService:
             },
         }
 
+    def _detect_conditions(self, data):
+        conditions = []
+        sbp = data.get('systolic_bp')
+        dbp = data.get('diastolic_bp')
+        if sbp is not None and (sbp >= 130 or (dbp is not None and dbp >= 90)):
+            conditions.append({'condition': 'Hypertension', 'code': 'I10', 'based_on': 'blood_pressure'})
+        glucose = data.get('glucose')
+        if glucose is not None and glucose >= 126:
+            conditions.append({'condition': 'Diabetes Mellitus', 'code': 'E11', 'based_on': 'glucose'})
+        bmi = data.get('bmi')
+        if bmi is not None:
+            if bmi >= 40:
+                conditions.append({'condition': 'Morbid Obesity', 'code': 'E66.0', 'based_on': 'bmi'})
+            elif bmi >= 30:
+                conditions.append({'condition': 'Obesity', 'code': 'E66', 'based_on': 'bmi'})
+        cholesterol = data.get('cholesterol')
+        if cholesterol is not None and cholesterol >= 240:
+            conditions.append({'condition': 'Hypercholesterolemia', 'code': '', 'based_on': 'cholesterol'})
+        return conditions
+
     def predict(self, model_id, input_data, patient=None):
         from .models import MLModelRegistry, MLPrediction
 
@@ -350,7 +370,8 @@ class MLService:
                 )
             except Exception as save_e:
                 logger.warning(f"No se pudo guardar el registro de predicción: {save_e}")
-            return {'success': True, 'model_id': model_obj.id, **result}
+            detected = self._detect_conditions(input_data)
+            return {'success': True, 'model_id': model_obj.id, 'detected_conditions': detected, **result}
         except FileNotFoundError:
             old_path = model_obj.file_path
             model_obj.is_active = False
