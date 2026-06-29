@@ -160,14 +160,44 @@ function MLContent() {
               </div>
               <Button className="w-full mt-4" onClick={handlePredict}><BarChart3 className="h-4 w-4 mr-2" />Predecir</Button>
               {prediction && (
-                <div className="mt-4 rounded-lg border p-3 text-sm space-y-1">
-                  <p className="font-medium">Resultado</p>
-                  {Object.entries(prediction).filter(([k]) => k !== 'success').map(([k, v]) => (
-                    <div key={k} className="flex justify-between">
-                      <span className="text-muted-foreground capitalize">{k.replace('_', ' ')}</span>
-                      <span className="font-medium">{typeof v === 'number' ? `${(v as number).toFixed(2)}` : String(v)}</span>
-                    </div>
-                  ))}
+                <div className="mt-4 rounded-lg border p-3 text-sm space-y-2">
+                  <p className="font-medium text-base">Resultado de Predicción</p>
+                  <div className="flex justify-between items-center py-1 border-b">
+                    <span className="text-muted-foreground">Riesgo Clínico</span>
+                    <Badge className={
+                      prediction.predicted_risk === 'critical' ? 'bg-red-100 text-red-800' :
+                      prediction.predicted_risk === 'high' ? 'bg-orange-100 text-orange-800' :
+                      prediction.predicted_risk === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                      'bg-green-100 text-green-800'
+                    }>
+                      {String(prediction.predicted_risk ?? '').charAt(0).toUpperCase() + String(prediction.predicted_risk ?? '').slice(1)}
+                    </Badge>
+                  </div>
+                  {(() => {
+                    const probs = prediction.probabilities;
+                    if (!probs || typeof probs !== 'object') return null;
+                    return (
+                      <>
+                        <p className="text-xs text-muted-foreground mt-2 mb-1">Probabilidad por categoría</p>
+                        <div className="space-y-1">
+                          {Object.entries(probs as Record<string, number>).map(([cat, prob]) => (
+                            <div key={cat} className="flex items-center gap-2">
+                              <span className="w-16 text-xs capitalize text-muted-foreground">{cat}</span>
+                              <div className="flex-1 h-3 rounded-full bg-gray-100 overflow-hidden">
+                                <div className={`h-full rounded-full transition-all ${
+                                  cat === 'critical' ? 'bg-red-500' :
+                                  cat === 'high' ? 'bg-orange-500' :
+                                  cat === 'medium' ? 'bg-yellow-500' :
+                                  'bg-green-500'
+                                }`} style={{ width: `${(prob * 100).toFixed(1)}%` }} />
+                              </div>
+                              <span className="w-12 text-right text-xs font-medium">{(prob * 100).toFixed(1)}%</span>
+                            </div>
+                          ))}
+                        </div>
+                      </>
+                    );
+                  })()}
                 </div>
               )}
             </CardContent>
